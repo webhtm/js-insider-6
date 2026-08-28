@@ -4182,22 +4182,313 @@ li.CodeMirror-hint-active { background: #3498db; color: #fff; }
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 6px 7px 14px;
+  padding: 5px 6px 5px 8px;
   background: #2c3e50;
   border-bottom: 1px solid #3d556e;
   flex-shrink: 0;
 }
 .pvc-title { flex: 1 1 auto; font-size: 13px; font-weight: 600; }
-.pvc-counts { display: flex; gap: 6px; font-size: 10.5px; }
-.pvc-counts span {
-  border-radius: 999px;
-  padding: 1px 7px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
+
+/* ---- the tab strip across the top of the dock ----
+   `flex: 1 1 0` with a zero basis is what actually lets it scroll: at
+   `1 1 auto` the strip's content width becomes its minimum and it pushes the
+   buttons beside it off the end instead of overflowing inside itself. */
+.pvc-tabs {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
-.pvc-counts .pvc-c-warn  { color: #f1c40f; background: rgba(241,196,15,0.14); }
-.pvc-counts .pvc-c-error { color: #ff8b7d; background: rgba(231,76,60,0.16); }
-.pvc-counts span[hidden] { display: none; }
+.pvc-tab {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: #9fb0c0;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.pvc-tab:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.pvc-tab.active { background: rgba(52,152,219,0.28); color: #fff; font-weight: 700; }
+
+.pvc-panes { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.pvc-pane { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.pvc-pane[hidden] { display: none; }
+.pvc-pane.ins-scroll {
+  display: block;
+  overflow-y: auto;
+  background: #1b2b3c;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+/* The panel is narrow, so a permanent gutter costs more than it explains:
+   every inspector pane carries `.no-scrollbar` (the opt-out the global
+   scrollbar theme provides) and scrolls without one.  The Code pane is the
+   exception — a long block of markup gives you no other sense of position. */
+
+/* The tools that used to sit on a rail under the tabs now live in the
+   panel's ⋯ menu, so every tab shows only its own subject. */
+
+/* Element properties, under the tree on the Elements tab. */
+.ins-props {
+  flex: 0 0 auto;
+  max-height: 42%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #22344a;
+  border-top: 1px solid #3d556e;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.ins-props .ins-empty { padding: 12px 6px; }
+
+/* A row of category buttons pinned to the bottom of a pane. */
+.ins-footbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 7px 10px;
+  background: #22344a;
+  border-top: 1px solid #3d556e;
+}
+.ins-cat {
+  background: #34495e;
+  border: 1px solid #46617d;
+  color: #dfe8ef;
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ins-cat:hover:not(:disabled) { background: #46617d; color: #fff; }
+.ins-cat:disabled { opacity: 0.4; cursor: not-allowed; }
+.ins-cat .n {
+  font-size: 10.5px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+.ins-cat::after { content: '▾'; font-size: 9px; opacity: 0.7; }
+/* Nothing selected means no categories, and no empty strip either. */
+.ins-footbar:empty { display: none; }
+.pvc-pane .ins-subbody { flex: 1 1 auto; min-height: 0; }
+
+/* ---- Elements: the tree ---- */
+.ins-search { position: relative; flex-shrink: 0; padding: 6px 8px; background: #22344a; border-bottom: 1px solid #3d556e; }
+.ins-search svg { position: absolute; left: 17px; top: 50%; transform: translateY(-50%); width: 13px; height: 13px; color: #8fa3b5; pointer-events: none; }
+.ins-search input {
+  width: 100%; box-sizing: border-box;
+  padding: 5px 8px 5px 28px;
+  background: #16222f; border: 1px solid #3d556e; border-radius: 5px;
+  color: #ecf0f1; font-family: inherit; font-size: 12px; outline: none;
+}
+.ins-search input:focus { border-color: #3498db; }
+
+.ins-tree {
+  flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain;
+  background: #1b2b3c;
+  font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+  font-size: 12px;
+  padding: 4px 0 8px 0;
+}
+
+.ins-node {
+  display: flex; align-items: center; gap: 3px;
+  padding: 2px 8px 2px 0;
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.ins-node:hover { background: rgba(255,255,255,0.07); }
+.ins-node.sel { background: rgba(52,152,219,0.34); }
+.ins-twist {
+  width: 14px; height: 14px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #7f95a8; font-size: 9px; line-height: 1;
+}
+.ins-twist.leaf { visibility: hidden; }
+.ins-tag { color: #7fbfff; }
+.ins-id { color: #f1c40f; }
+.ins-cls { color: #9be29b; }
+.ins-txt { color: #8fa3b5; font-style: italic; margin-left: 5px; overflow: hidden; text-overflow: ellipsis; }
+.ins-crumbs {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 2px;
+  padding: 4px 8px;
+  background: #22344a; border-top: 1px solid #3d556e;
+  font-family: 'Consolas', 'Menlo', monospace; font-size: 10.5px;
+  overflow-x: auto; white-space: nowrap;
+}
+.ins-crumbs::-webkit-scrollbar { height: 0; }
+.ins-crumb { color: #9fb0c0; cursor: pointer; }
+.ins-crumb:hover { color: #fff; text-decoration: underline; }
+.ins-crumb.last { color: #7fbfff; font-weight: 700; }
+.ins-crumb-sep { color: #5d7387; }
+
+/* ---- shared bits inside the detail panes ---- */
+.ins-empty { padding: 26px 12px; text-align: center; color: #8fa3b5; font-size: 12.5px; }
+.ins-h {
+  font-size: 9.5px; letter-spacing: 0.9px; text-transform: uppercase;
+  color: #7f95a8; font-weight: 700; margin: 12px 0 5px 0;
+}
+.ins-h:first-child { margin-top: 0; }
+.ins-card { background: #22344a; border: 1px solid #33506e; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.ins-kv { display: flex; gap: 8px; padding: 2px 0; font-size: 12px; }
+.ins-kv .k { flex: 0 0 40%; color: #8fa3b5; overflow: hidden; text-overflow: ellipsis; }
+.ins-kv .v { flex: 1 1 auto; min-width: 0; color: #ecf0f1; font-family: 'Consolas','Menlo',monospace; word-break: break-word; }
+.ins-btn {
+  background: #34495e; border: 1px solid #46617d; color: #dfe8ef;
+  border-radius: 5px; padding: 4px 9px; font-family: inherit; font-size: 11.5px;
+  cursor: pointer; margin: 4px 4px 0 0;
+}
+.ins-btn:hover { background: #46617d; color: #fff; }
+.ins-btn.primary { background: rgba(52,152,219,0.35); border-color: #3498db; }
+.ins-btn.danger { background: rgba(231,76,60,0.24); border-color: #c0392b; color: #ffb3a8; }
+.ins-pill {
+  display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 999px;
+  background: #34495e; color: #cfd8e0; margin: 0 4px 4px 0;
+}
+.ins-pill.bad { background: rgba(231,76,60,0.24); color: #ff9c8f; }
+.ins-pill.good { background: rgba(39,174,96,0.24); color: #86e0ab; }
+
+/* ---- Styles pane ---- */
+.ins-rule { border-bottom: 1px solid #2b4055; padding: 7px 0; font-family: 'Consolas','Menlo',monospace; font-size: 12px; }
+.ins-rule.pseudo { opacity: 0.6; }
+.ins-rule-sel { color: #f1c40f; word-break: break-word; }
+.ins-rule-src { float: right; font-size: 10px; color: #7f95a8; font-family: Trebuchet MS, sans-serif; }
+.ins-decl { display: flex; gap: 6px; padding: 1px 0 1px 14px; }
+.ins-decl input[type=checkbox] { margin: 3px 0 0 0; flex-shrink: 0; }
+.ins-decl .p { color: #9be29b; flex-shrink: 0; }
+.ins-decl .v { color: #ecf0f1; flex: 1 1 auto; min-width: 0; word-break: break-word; cursor: text; }
+.ins-decl.off .p, .ins-decl.off .v { text-decoration: line-through; opacity: 0.5; }
+.ins-decl .v[contenteditable="true"]:focus { outline: 1px solid #3498db; background: #16222f; border-radius: 3px; }
+.ins-filter {
+  width: 100%; box-sizing: border-box; margin-bottom: 6px;
+  padding: 5px 8px; background: #16222f; border: 1px solid #3d556e;
+  border-radius: 5px; color: #ecf0f1; font-family: inherit; font-size: 12px; outline: none;
+}
+.ins-filter:focus { border-color: #3498db; }
+
+/* ---- Box model ---- */
+.ins-boxmodel { text-align: center; font-family: 'Consolas','Menlo',monospace; font-size: 11px; }
+.ins-bm-layer { border: 1px dashed #6b7f93; padding: 16px 10px; position: relative; margin: 0 auto; }
+.ins-bm-margin  { background: rgba(246,178,107,0.22); }
+.ins-bm-border  { background: rgba(255,229,153,0.20); }
+.ins-bm-padding { background: rgba(147,196,125,0.20); }
+.ins-bm-content { background: rgba(111,168,220,0.26); padding: 12px 10px; border: 1px dashed #6b7f93; }
+.ins-bm-tag {
+  position: absolute; left: 4px; top: 2px;
+  font-size: 8.5px; letter-spacing: 0.6px; text-transform: uppercase; color: #cfd8e0;
+}
+.ins-bm-n { color: #fff; cursor: pointer; padding: 0 3px; border-radius: 3px; }
+.ins-bm-n:hover { background: rgba(255,255,255,0.16); }
+.ins-bm-row { display: flex; align-items: center; justify-content: space-between; }
+
+/* ---- Events ---- */
+.ins-ev { border-bottom: 1px solid #2b4055; padding: 6px 0; }
+.ins-ev-head { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.ins-ev-type { color: #7fbfff; font-family: 'Consolas','Menlo',monospace; font-weight: 700; }
+.ins-ev-name { color: #9fb0c0; font-size: 11px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Handler bodies are code, so they keep a visible bar like the Code pane. */
+.ins-ev-src {
+  display: none; margin-top: 5px; padding: 7px 9px;
+  background: #16222f; border-radius: 5px;
+  font-family: 'Consolas','Menlo',monospace; font-size: 11px;
+  white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto;
+  color: #d7e2ea;
+}
+.ins-ev.open .ins-ev-src { display: block; }
+
+/* ---- Code pane ---- */
+.ins-code-box {
+  width: 100%; box-sizing: border-box; min-height: 150px;
+  background: #16222f; border: 1px solid #3d556e; border-radius: 6px;
+  color: #d7e2ea; font-family: 'Consolas','Menlo',monospace; font-size: 12px;
+  padding: 8px; resize: vertical; outline: none;
+}
+.ins-code-box:focus { border-color: #3498db; }
+.ins-note { margin-top: 8px; color: #8fa3b5; font-size: 11.5px; line-height: 1.5; }
+.ins-note b { color: #cfd8e0; }
+
+/* ---- the preview's own context menu (lives in the parent, over the frame) ---- */
+#pv-context-menu {
+  display: none;
+  position: fixed;
+  z-index: 1000099;
+  min-width: 220px;
+  max-width: calc(100vw - 16px);
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  background: #262626;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 9px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  font-family: Trebuchet MS, sans-serif;
+  padding: 5px 0;
+  user-select: none;
+}
+#pv-context-menu.open { display: block; }
+#pv-context-menu .pvm-head {
+  padding: 6px 13px 8px 13px;
+  font-size: 11px; color: #8fa3b5;
+  border-bottom: 1px solid #3a3a3a; margin-bottom: 4px;
+  font-family: 'Consolas','Menlo',monospace;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#pv-context-menu button {
+  display: flex; align-items: center; gap: 9px;
+  width: calc(100% - 8px); margin: 1px 4px; padding: 7px 12px;
+  background: none; border: none; color: #fff; text-align: left;
+  cursor: pointer; border-radius: 5px; font-family: inherit; font-size: 13px;
+}
+#pv-context-menu button:hover:not(:disabled) { background: rgba(255,255,255,0.1); }
+#pv-context-menu button:disabled { opacity: 0.38; cursor: not-allowed; }
+#pv-context-menu button.danger { color: #ff8b7d; }
+#pv-context-menu button.danger:hover { background: rgba(231,76,60,0.18); }
+#pv-context-menu hr { margin: 5px 12px; border: none; border-top: 1px solid #3d3d3d; }
+#pv-context-menu .pvm-key { margin-left: auto; font-size: 10.5px; color: #8fa3b5; font-family: 'Consolas','Menlo',monospace; }
+
+@media (max-width: 768px) {
+  .pvc-tab { font-size: 12.5px; padding: 7px 10px; }
+  .pvc-pane.ins-scroll { font-size: 13px; }
+  .ins-tree { font-size: 12.5px; }
+  #pv-context-menu { min-width: 200px; }
+  #pv-context-menu button { padding: 11px 12px; font-size: 14px; }
+}
+/* A warning is a warning: an icon says it, and the count only appears when
+   there is more than one of them. */
+.pvc-counts { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.pvc-counts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.pvc-counts svg { width: 15px; height: 15px; }
+.pvc-counts b:empty { display: none; }
+.pvc-counts .pvc-c-warn  { color: #f1c40f; }
+.pvc-counts .pvc-c-error { color: #ff8b7d; }
+.pvc-counts > span[hidden] { display: none; }
+.pvc-counts[hidden] { display: none; }
 #pv-console .tw-btn {
   background: transparent; border: none; color: #b0bec5; cursor: pointer;
   width: 26px; height: 26px; padding: 0; border-radius: 6px;
@@ -5290,6 +5581,9 @@ body.preview-open .cli-shell { z-index: 90000; }
           <span id="preview-filename"></span>
         </h3>
         <span id="preview-bg-hint" style="display:none; color:#f1c40f; font-size:12px; margin-right:10px;">Closes to background</span>
+        <button id="pv-inspect-btn" class="header-btn" title="Inspect elements" aria-pressed="false" style="margin-right:6px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M13 2v6"/><path d="M2 13h6"/><path d="M13 13l8 8"/><path d="M4.9 4.9l3.5 3.5"/><path d="M13 21v-8h8z"/></svg>
+        </button>
         <button id="pv-console-btn" class="header-btn" title="Console" data-state="ok" aria-pressed="false" style="margin-right:6px;">
           <span class="pvc-ico pvc-ico-ok">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
@@ -5317,27 +5611,68 @@ body.preview-open .cli-shell { z-index: 90000; }
       </div>
       <div class="modal-body">
         <iframe id="code-preview" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>
-        <aside id="pv-console" aria-label="Preview console">
+        <aside id="pv-console" aria-label="Preview tools">
           <div class="pvc-grip" id="pvc-grip" title="Drag to resize"></div>
           <div class="pvc-head">
-            <span class="pvc-title">Console</span>
-            <span class="pvc-counts">
-              <span class="pvc-c-warn" id="pvc-c-warn" hidden></span>
-              <span class="pvc-c-error" id="pvc-c-error" hidden></span>
+            <div class="pvc-tabs no-scrollbar" id="pvc-tabs" role="tablist" aria-label="Preview tools">
+              <button type="button" class="pvc-tab active" data-pane="console" role="tab" aria-selected="true">Console</button>
+              <button type="button" class="pvc-tab" data-pane="elements" role="tab" aria-selected="false">Elements</button>
+              <button type="button" class="pvc-tab" data-pane="code" role="tab" aria-selected="false">Code</button>
+              <button type="button" class="pvc-tab" data-pane="styles" role="tab" aria-selected="false">Styles</button>
+              <button type="button" class="pvc-tab" data-pane="box" role="tab" aria-selected="false">Box</button>
+              <button type="button" class="pvc-tab" data-pane="events" role="tab" aria-selected="false">JS Events</button>
+              <button type="button" class="pvc-tab" data-pane="a11y" role="tab" aria-selected="false">A11y</button>
+            </div>
+            <span class="pvc-counts" id="pvc-counts">
+              <span class="pvc-c-warn" id="pvc-c-warn" hidden title="Warnings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.1"/></svg><b></b>
+              </span>
+              <span class="pvc-c-error" id="pvc-c-error" hidden title="Errors">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><b></b>
+              </span>
             </span>
-            <button type="button" id="pvc-clear" class="tw-btn" title="Clear" aria-label="Clear the console">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M14.5 3.5l6 6-8 8H6.5l-2.5-2.5z"/><path d="M9.5 8.5l6 6"/></svg>
+            <button type="button" id="pvc-more" class="tw-btn" title="Panel tools" aria-label="Panel tools" aria-haspopup="menu" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>
             </button>
-            <button type="button" id="pvc-close" class="tw-btn" title="Close the console" aria-label="Close the console">
+            <button type="button" id="pvc-close" class="tw-btn" title="Close the panel" aria-label="Close the panel">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
             </button>
           </div>
-          <div class="pvc-body" id="pvc-body"></div>
-          <div class="pvc-input-wrap">
-            <span class="cli-prompt" aria-hidden="true">&rsaquo;</span>
-            <input type="text" id="pvc-input" spellcheck="false" autocomplete="off"
-                   aria-label="Run JavaScript in the preview"
-                   placeholder="Run JavaScript in the preview…">
+
+          <button type="button" id="pvc-clear" hidden aria-hidden="true"></button>
+
+          <div class="pvc-panes" id="pvc-panes">
+            <div class="pvc-pane pvc-pane-console" data-pane="console">
+              <div class="pvc-body" id="pvc-body"></div>
+              <div class="pvc-input-wrap">
+                <span class="cli-prompt" aria-hidden="true">&rsaquo;</span>
+                <input type="text" id="pvc-input" spellcheck="false" autocomplete="off"
+                       aria-label="Run JavaScript in the preview"
+                       placeholder="Run JavaScript in the preview…">
+              </div>
+            </div>
+
+            <div class="pvc-pane" data-pane="elements" hidden>
+              <div class="ins-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                <input type="text" id="ins-search" placeholder="Find by tag, #id or .class…" spellcheck="false" autocomplete="off">
+              </div>
+              <div class="ins-tree no-scrollbar" id="ins-tree"></div>
+              <div class="ins-crumbs no-scrollbar" id="ins-crumbs"></div>
+              <div class="ins-props no-scrollbar" id="ins-props"></div>
+            </div>
+
+            <div class="pvc-pane ins-scroll" data-pane="code" hidden><div id="ins-code"></div></div>
+            <div class="pvc-pane ins-scroll no-scrollbar" data-pane="styles" hidden><div id="ins-styles"></div></div>
+            <div class="pvc-pane ins-scroll no-scrollbar" data-pane="box" hidden><div id="ins-box"></div></div>
+            <div class="pvc-pane" data-pane="events" hidden>
+              <div class="ins-scroll no-scrollbar ins-subbody" id="ins-events"></div>
+              <div class="ins-footbar" id="ins-events-foot"></div>
+            </div>
+            <div class="pvc-pane" data-pane="a11y" hidden>
+              <div class="ins-scroll no-scrollbar ins-subbody" id="ins-a11y"></div>
+              <div class="ins-footbar" id="ins-a11y-foot"></div>
+            </div>
           </div>
         </aside>
       </div>
@@ -10337,11 +10672,699 @@ function __jscBuildBridgeScript(fileName) {
     "  __post({ kind:'ready', source:__src });\n" +
     "})();<\/script>";
 }
+/* ==========================================================================
+   INSPECTOR AGENT
+   Runs inside the preview document.  Written as a real function here so the
+   parser checks it, then stringified into the injected shim — it has to be
+   in there rather than reaching in from the parent because the listener
+   registry only works if it wraps addEventListener before any page code runs.
+   Talks the `inspect` / `inspect-result` / `inspect-event` bridge messages.
+   ========================================================================== */
+function __jscInspectorAgent() {
+  'use strict';
+  if (window.__inspectAgent) return;
+
+  /* ---- who is listening to what ---- */
+  var REG = new WeakMap();
+  var addFn = EventTarget.prototype.addEventListener;
+  var remFn = EventTarget.prototype.removeEventListener;
+  EventTarget.prototype.addEventListener = function (type, fn, opts) {
+    try {
+      var list = REG.get(this);
+      if (!list) { list = []; REG.set(this, list); }
+      list.push({ type: type, fn: fn, opts: opts });
+    } catch (e) {}
+    return addFn.apply(this, arguments);
+  };
+  EventTarget.prototype.removeEventListener = function (type, fn) {
+    try {
+      var list = REG.get(this);
+      if (list) {
+        for (var i = list.length - 1; i >= 0; i--) {
+          if (list[i].type === type && list[i].fn === fn) { list.splice(i, 1); break; }
+        }
+      }
+    } catch (e) {}
+    return remFn.apply(this, arguments);
+  };
+
+  function send(kind, payload) {
+    try { parent.postMessage(Object.assign({ __jscBridge: kind }, payload), '*'); } catch (e) {}
+  }
+  var reply = function (p) { send('inspect-result', p); };
+  var emit = function (p) { send('inspect-event', p); };
+
+  /* ---- addressing: a path of child indices down from <html> ---- */
+  function pathOf(el) {
+    var p = [];
+    while (el && el.nodeType === 1 && el !== document.documentElement) {
+      var par = el.parentNode;
+      if (!par || par.nodeType !== 1) return el === document.documentElement ? p : null;
+      var i = 0, n = par.firstElementChild;
+      while (n && n !== el) { i++; n = n.nextElementSibling; }
+      p.unshift(i);
+      el = par;
+    }
+    return p;
+  }
+  function nodeAt(path) {
+    var el = document.documentElement;
+    for (var i = 0; i < (path || []).length; i++) {
+      if (!el || !el.children[path[i]]) return null;
+      el = el.children[path[i]];
+    }
+    return el;
+  }
+
+  /* ---- a readable one-line label for a node ---- */
+  function label(el) {
+    var s = el.tagName.toLowerCase();
+    if (el.id) s += '#' + el.id;
+    var cls = (el.getAttribute('class') || '').trim();
+    if (cls) s += '.' + cls.split(/\s+/).slice(0, 3).join('.');
+    return s;
+  }
+  function cssPath(el) {
+    if (!el || el.nodeType !== 1) return '';
+    if (el.id) return '#' + CSS.escape(el.id);
+    var parts = [];
+    var cur = el;
+    while (cur && cur.nodeType === 1 && cur !== document.documentElement) {
+      var seg = cur.tagName.toLowerCase();
+      if (cur.id) { parts.unshift('#' + CSS.escape(cur.id)); break; }
+      var cls = (cur.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean);
+      if (cls.length) seg += '.' + cls.map(function (c) { return CSS.escape(c); }).join('.');
+      var par = cur.parentNode;
+      if (par && par.nodeType === 1) {
+        var same = 0, idx = 0, n = par.firstElementChild;
+        while (n) {
+          if (n.tagName === cur.tagName) { same++; if (n === cur) idx = same; }
+          n = n.nextElementSibling;
+        }
+        if (same > 1) seg += ':nth-of-type(' + idx + ')';
+      }
+      parts.unshift(seg);
+      cur = par;
+    }
+    return parts.join(' > ');
+  }
+
+  function textPeek(el) {
+    var t = '';
+    for (var i = 0; i < el.childNodes.length && t.length < 40; i++) {
+      var n = el.childNodes[i];
+      if (n.nodeType === 3) t += n.nodeValue;
+    }
+    t = t.replace(/\s+/g, ' ').trim();
+    return t.length > 40 ? t.slice(0, 37) + '…' : t;
+  }
+
+  function brief(el) {
+    return {
+      path: pathOf(el),
+      tag: el.tagName.toLowerCase(),
+      label: label(el),
+      id: el.id || '',
+      cls: el.getAttribute('class') || '',
+      text: textPeek(el),
+      kids: el.childElementCount,
+      selector: cssPath(el)
+    };
+  }
+
+  /* ---- the highlight overlay ----
+     Each layer is drawn as four bands rather than one filled rectangle: a
+     side with no margin or padding then paints nothing at all.  Filling the
+     whole box instead meant highlighting <html> or <body> washed the entire
+     page in yellow, which told you nothing and hid the page underneath. */
+  var ov = null;
+  function overlay() {
+    if (ov && ov.root.isConnected) return ov;
+    var root = document.createElement('div');
+    root.setAttribute('data-jsc-overlay', '1');
+    root.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;z-index:2147483646;pointer-events:none;';
+    var mk = function (css) {
+      var d = document.createElement('div');
+      d.style.cssText = 'position:fixed;pointer-events:none;display:none;' + css;
+      root.appendChild(d);
+      return d;
+    };
+    var ring = function (bg) {
+      return [mk('background:' + bg), mk('background:' + bg), mk('background:' + bg), mk('background:' + bg)];
+    };
+    ov = {
+      root: root,
+      margin: ring('rgba(246,178,107,0.30)'),
+      border: ring('rgba(255,229,153,0.38)'),
+      padding: ring('rgba(147,196,125,0.32)'),
+      content: mk('background:rgba(111,168,220,0.22)'),
+      outline: mk('box-shadow:inset 0 0 0 1px rgba(52,152,219,0.95);border-radius:1px'),
+      tip: (function () {
+        var d = document.createElement('div');
+        d.style.cssText = 'position:fixed;pointer-events:none;display:none;background:#1b2b3c;color:#ecf0f1;'
+          + 'font:11px/1.4 Menlo,Consolas,monospace;padding:3px 7px;border-radius:4px;'
+          + 'white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5);max-width:90vw;overflow:hidden;'
+          + 'text-overflow:ellipsis;';
+        root.appendChild(d);
+        return d;
+      })()
+    };
+    document.documentElement.appendChild(root);
+    return ov;
+  }
+  function box(el, style, side) {
+    var f = function (p) { return parseFloat(style.getPropertyValue(p)) || 0; };
+    return {
+      t: f(side + '-top' + (side === 'border' ? '-width' : '')),
+      r: f(side + '-right' + (side === 'border' ? '-width' : '')),
+      b: f(side + '-bottom' + (side === 'border' ? '-width' : '')),
+      l: f(side + '-left' + (side === 'border' ? '-width' : ''))
+    };
+  }
+  function place(d, x, y, w, h) {
+    if (w <= 0.01 || h <= 0.01) { d.style.display = 'none'; return; }
+    d.style.left = x + 'px'; d.style.top = y + 'px';
+    d.style.width = w + 'px'; d.style.height = h + 'px';
+    d.style.display = '';
+  }
+  /* Four bands around `inner`, `t/r/b/l` thick. */
+  function placeRing(bands, x, y, w, h, t) {
+    place(bands[0], x - t.l, y - t.t, w + t.l + t.r, t.t);                 // top
+    place(bands[1], x + w, y - t.t, t.r, h + t.t + t.b);                   // right
+    place(bands[2], x - t.l, y + h, w + t.l + t.r, t.b);                   // bottom
+    place(bands[3], x - t.l, y - t.t, t.l, h + t.t + t.b);                 // left
+  }
+  function showHighlight(el) {
+    if (!el || !el.getBoundingClientRect) return hideHighlight();
+    var o = overlay();
+    var r = el.getBoundingClientRect();
+    var cs = getComputedStyle(el);
+    var m = box(el, cs, 'margin'), b = box(el, cs, 'border'), p = box(el, cs, 'padding');
+
+    var cx = r.left + b.l + p.l, cy = r.top + b.t + p.t;
+    var cw = r.width - b.l - b.r - p.l - p.r, ch = r.height - b.t - b.b - p.t - p.b;
+    place(o.content, cx, cy, cw, ch);
+    placeRing(o.padding, cx, cy, cw, ch, p);
+    placeRing(o.border, r.left + b.l, r.top + b.t, r.width - b.l - b.r, r.height - b.t - b.b, b);
+    placeRing(o.margin, r.left, r.top, r.width, r.height, m);
+    place(o.outline, r.left, r.top, r.width, r.height);
+
+    o.tip.textContent = label(el) + '  ' + Math.round(r.width) + ' × ' + Math.round(r.height);
+    o.tip.style.display = '';
+    var ty = r.top - 22;
+    if (ty < 2) ty = Math.min(window.innerHeight - 22, r.bottom + 4);
+    o.tip.style.left = Math.max(2, Math.min(r.left, window.innerWidth - 220)) + 'px';
+    o.tip.style.top = ty + 'px';
+  }
+  function hideHighlight() {
+    if (!ov) return;
+    [].concat(ov.margin, ov.border, ov.padding, [ov.content, ov.outline, ov.tip])
+      .forEach(function (d) { d.style.display = 'none'; });
+  }
+
+  /* ---- styles ---- */
+  function sheetName(sheet) {
+    try {
+      if (sheet.href) return sheet.href.split('/').pop();
+      if (sheet.ownerNode && sheet.ownerNode.tagName === 'STYLE') return 'inline style block';
+    } catch (e) {}
+    return 'stylesheet';
+  }
+  function declsOf(rule) {
+    var out = [];
+    var st = rule.style;
+    for (var i = 0; i < st.length; i++) {
+      var p = st[i];
+      out.push({ prop: p, value: st.getPropertyValue(p), important: st.getPropertyPriority(p) === 'important' });
+    }
+    return out;
+  }
+  function matchedRules(el) {
+    var out = [];
+    var sheets = document.styleSheets;
+    for (var i = 0; i < sheets.length; i++) {
+      var rules;
+      try { rules = sheets[i].cssRules; } catch (e) { continue; }
+      if (!rules) continue;
+      var name = sheetName(sheets[i]);
+      (function walk(list, media) {
+        for (var j = 0; j < list.length; j++) {
+          var r = list[j];
+          if (r.cssRules && r.conditionText !== undefined) {
+            var on = true;
+            try { on = !r.media || matchMedia(r.conditionText).matches; } catch (e) {}
+            walk(r.cssRules, r.conditionText);
+            continue;
+          }
+          if (!r.selectorText) continue;
+          var hit = false;
+          try { hit = el.matches(r.selectorText); } catch (e) { hit = false; }
+          if (!hit) {
+            /* Keep pseudo-state rules so "force :hover" has something to work
+               with, flagged so the panel can grey them out. */
+            var bare = r.selectorText.replace(/:(hover|focus|active|focus-visible|focus-within)\b/g, '');
+            if (bare !== r.selectorText) {
+              try { if (el.matches(bare)) out.push({ sel: r.selectorText, sheet: name, media: media || '', decls: declsOf(r), pseudo: true }); }
+              catch (e) {}
+            }
+            continue;
+          }
+          out.push({ sel: r.selectorText, sheet: name, media: media || '', decls: declsOf(r), pseudo: false });
+        }
+      })(rules, '');
+    }
+    var inline = declsOf({ style: el.style });
+    if (inline.length) out.unshift({ sel: 'element.style', sheet: 'inline', media: '', decls: inline, inline: true });
+    return out;
+  }
+  function computedOf(el) {
+    var cs = getComputedStyle(el), out = [];
+    for (var i = 0; i < cs.length; i++) out.push({ prop: cs[i], value: cs.getPropertyValue(cs[i]) });
+    return out;
+  }
+  function boxOf(el) {
+    var r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+    var m = box(el, cs, 'margin'), b = box(el, cs, 'border'), p = box(el, cs, 'padding');
+    return {
+      width: r.width, height: r.height, margin: m, border: b, padding: p,
+      content: {
+        w: r.width - b.l - b.r - p.l - p.r,
+        h: r.height - b.t - b.b - p.t - p.b
+      },
+      display: cs.display, position: cs.position, boxSizing: cs.boxSizing,
+      flex: cs.display.indexOf('flex') !== -1 ? {
+        direction: cs.flexDirection, wrap: cs.flexWrap, gap: cs.gap,
+        justify: cs.justifyContent, align: cs.alignItems, content: cs.alignContent
+      } : null,
+      grid: cs.display.indexOf('grid') !== -1 ? {
+        cols: cs.gridTemplateColumns, rows: cs.gridTemplateRows, gap: cs.gap,
+        justify: cs.justifyItems, align: cs.alignItems, flow: cs.gridAutoFlow
+      } : null,
+      childOfFlex: (function () {
+        var par = el.parentElement;
+        if (!par) return null;
+        var pcs = getComputedStyle(par);
+        if (pcs.display.indexOf('flex') === -1) return null;
+        return { grow: cs.flexGrow, shrink: cs.flexShrink, basis: cs.flexBasis, self: cs.alignSelf, order: cs.order };
+      })()
+    };
+  }
+
+  /* ---- events ---- */
+  function fnSource(fn) {
+    var s = '';
+    try { s = String(fn); } catch (e) { s = '[native]'; }
+    return s.length > 4000 ? s.slice(0, 4000) + '\n…' : s;
+  }
+  function eventsOf(el) {
+    var out = [];
+    var list = [];
+    try { list = REG.get(el) || []; } catch (e) {}
+    list.forEach(function (r) {
+      var o = r.opts;
+      out.push({
+        type: r.type,
+        capture: !!(o === true || (o && o.capture)),
+        passive: !!(o && o.passive),
+        once: !!(o && o.once),
+        source: fnSource(r.fn),
+        name: (r.fn && r.fn.name) || '(anonymous)',
+        where: 'addEventListener'
+      });
+    });
+    for (var i = 0; i < el.attributes.length; i++) {
+      var a = el.attributes[i];
+      if (a.name.indexOf('on') === 0 && a.name.length > 2) {
+        out.push({ type: a.name.slice(2), capture: false, passive: false, once: false,
+                   source: a.value, name: '(inline attribute)', where: 'attribute' });
+      }
+    }
+    /* Handlers further up the tree still fire on this node, so show them. */
+    var anc = el.parentElement, depth = 0;
+    while (anc && depth < 12) {
+      var l2 = [];
+      try { l2 = REG.get(anc) || []; } catch (e) {}
+      l2.forEach(function (r) {
+        out.push({
+          type: r.type, capture: !!(r.opts === true || (r.opts && r.opts.capture)),
+          passive: !!(r.opts && r.opts.passive), once: !!(r.opts && r.opts.once),
+          source: fnSource(r.fn), name: (r.fn && r.fn.name) || '(anonymous)',
+          where: 'on ' + label(anc), inherited: true
+        });
+      });
+      anc = anc.parentElement; depth++;
+    }
+    return out;
+  }
+
+  /* ---- accessibility ---- */
+  var IMPLICIT = {
+    a: 'link', button: 'button', h1: 'heading', h2: 'heading', h3: 'heading',
+    h4: 'heading', h5: 'heading', h6: 'heading', img: 'img', input: 'textbox',
+    nav: 'navigation', main: 'main', header: 'banner', footer: 'contentinfo',
+    aside: 'complementary', form: 'form', section: 'region', ul: 'list',
+    ol: 'list', li: 'listitem', table: 'table', select: 'combobox',
+    textarea: 'textbox', label: 'label', p: 'paragraph'
+  };
+  function rgb(str) {
+    var m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+))?/i.exec(str || '');
+    if (!m) return null;
+    return [ +m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4] ];
+  }
+  function lum(c) {
+    var a = c.slice(0, 3).map(function (v) {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+  function effectiveBg(el) {
+    var cur = el;
+    while (cur && cur.nodeType === 1) {
+      var c = rgb(getComputedStyle(cur).backgroundColor);
+      if (c && c[3] > 0.05) return c;
+      cur = cur.parentElement;
+    }
+    return [255, 255, 255, 1];
+  }
+  function a11yOf(el) {
+    var cs = getComputedStyle(el);
+    var tag = el.tagName.toLowerCase();
+    var role = el.getAttribute('role') || IMPLICIT[tag] || '';
+    var name = el.getAttribute('aria-label') || '';
+    if (!name && el.getAttribute('aria-labelledby')) {
+      var ref = document.getElementById(el.getAttribute('aria-labelledby'));
+      if (ref) name = (ref.textContent || '').trim();
+    }
+    if (!name) name = el.getAttribute('alt') || el.getAttribute('title') || '';
+    if (!name) name = (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+
+    var fg = rgb(cs.color) || [0, 0, 0, 1];
+    var bg = effectiveBg(el);
+    var l1 = lum(fg), l2 = lum(bg);
+    var ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    var big = parseFloat(cs.fontSize) >= 24 ||
+      (parseFloat(cs.fontSize) >= 18.66 && (parseInt(cs.fontWeight, 10) || 400) >= 700);
+
+    var states = [];
+    ['aria-hidden', 'aria-disabled', 'aria-expanded', 'aria-checked', 'aria-selected',
+     'aria-pressed', 'aria-current', 'aria-live', 'tabindex'].forEach(function (a) {
+      if (el.hasAttribute(a)) states.push(a + '=' + el.getAttribute(a));
+    });
+    if (el.disabled) states.push('disabled');
+    if (cs.display === 'none') states.push('display:none');
+    if (cs.visibility === 'hidden') states.push('visibility:hidden');
+
+    var issues = [];
+    if (tag === 'img' && !el.hasAttribute('alt')) issues.push('<img> has no alt attribute');
+    if (tag === 'a' && !name) issues.push('Link has no accessible name');
+    if (tag === 'button' && !name) issues.push('Button has no accessible name');
+    if (ratio < (big ? 3 : 4.5)) {
+      issues.push('Contrast ' + ratio.toFixed(2) + ':1 is below the ' + (big ? '3' : '4.5') + ':1 minimum');
+    }
+
+    var heads = [], lastLevel = 0, order = [];
+    document.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(function (h) {
+      var lv = +h.tagName.slice(1);
+      var skipped = lastLevel && lv > lastLevel + 1;
+      order.push({ level: lv, text: (h.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60),
+                   skipped: skipped, path: pathOf(h) });
+      lastLevel = lv;
+      heads.push(lv);
+    });
+    var landmarks = [];
+    document.querySelectorAll('header,nav,main,aside,footer,form,section,[role]').forEach(function (n) {
+      var r = n.getAttribute('role') || IMPLICIT[n.tagName.toLowerCase()] || '';
+      if (!r) return;
+      landmarks.push({ role: r, label: label(n), path: pathOf(n) });
+    });
+
+    return {
+      role: role || '(none)', name: name || '(none)', states: states, issues: issues,
+      contrast: { ratio: +ratio.toFixed(2), fg: cs.color, bg: 'rgb(' + bg.slice(0, 3).join(', ') + ')',
+                  needs: big ? 3 : 4.5, pass: ratio >= (big ? 3 : 4.5) },
+      headings: order.slice(0, 60), landmarks: landmarks.slice(0, 40)
+    };
+  }
+
+  /* ---- forced pseudo states, approximated by copying the rules inline ---- */
+  var forced = new Map();
+  function forceState(el, state, on) {
+    var key = state;
+    var store = forced.get(el) || {};
+    if (!on) {
+      var saved = store[key];
+      if (saved) {
+        Object.keys(saved).forEach(function (p) {
+          if (saved[p] === null) el.style.removeProperty(p);
+          else el.style.setProperty(p, saved[p]);
+        });
+        delete store[key];
+        forced.set(el, store);
+      }
+      return;
+    }
+    var before = {};
+    matchedRules(el).forEach(function (r) {
+      if (!r.pseudo) return;
+      if (r.sel.indexOf(':' + state) === -1) return;
+      r.decls.forEach(function (d) {
+        if (!(d.prop in before)) before[d.prop] = el.style.getPropertyValue(d.prop) || null;
+        el.style.setProperty(d.prop, d.value, d.important ? 'important' : '');
+      });
+    });
+    store[key] = before;
+    forced.set(el, store);
+  }
+
+  /* ---- element picker ---- */
+  var picking = false, pickHover = null;
+  /* Pick and measure both want the crosshair, so neither may clear it on its
+     own — the cursor follows whether *either* is live. */
+  function syncCursor() {
+    document.documentElement.style.cursor = (picking || measuring) ? 'crosshair' : '';
+  }
+  function setPick(on) {
+    picking = !!on;
+    syncCursor();
+    if (!picking) { hideHighlight(); pickHover = null; }
+  }
+  function isOverlay(n) {
+    return !!(n && n.closest && n.closest('[data-jsc-overlay]'));
+  }
+  document.addEventListener('mousemove', function (e) {
+    if (!picking) return;
+    var el = e.target;
+    if (isOverlay(el)) return;
+    if (el === pickHover) return;
+    pickHover = el;
+    showHighlight(el);
+    emit({ kind: 'hover', node: brief(el) });
+  }, true);
+  document.addEventListener('click', function (e) {
+    if (!picking) return;
+    e.preventDefault(); e.stopPropagation();
+    setPick(false);
+    emit({ kind: 'picked', node: brief(e.target) });
+  }, true);
+  document.addEventListener('keydown', function (e) {
+    if (picking && e.key === 'Escape') { setPick(false); emit({ kind: 'pick-cancelled' }); }
+  }, true);
+
+  /* ---- measuring ruler ---- */
+  var measuring = false, mStart = null, mBox = null;
+  function measureBox() {
+    if (mBox && mBox.isConnected) return mBox;
+    mBox = document.createElement('div');
+    mBox.setAttribute('data-jsc-overlay', '1');
+    mBox.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483647;border:1px dashed #3498db;'
+      + 'background:rgba(52,152,219,0.16);font:11px/1.4 Menlo,Consolas,monospace;color:#fff;'
+      + 'display:flex;align-items:center;justify-content:center;';
+    document.documentElement.appendChild(mBox);
+    return mBox;
+  }
+  function setMeasure(on) {
+    measuring = !!on;
+    syncCursor();
+    if (!measuring && mBox) mBox.style.display = 'none';
+  }
+  document.addEventListener('mousedown', function (e) {
+    if (!measuring) return;
+    e.preventDefault();
+    mStart = { x: e.clientX, y: e.clientY };
+  }, true);
+  document.addEventListener('mousemove', function (e) {
+    if (!measuring || !mStart) return;
+    var b = measureBox();
+    var x = Math.min(mStart.x, e.clientX), y = Math.min(mStart.y, e.clientY);
+    var w = Math.abs(e.clientX - mStart.x), h = Math.abs(e.clientY - mStart.y);
+    b.style.display = '';
+    b.style.left = x + 'px'; b.style.top = y + 'px';
+    b.style.width = w + 'px'; b.style.height = h + 'px';
+    b.textContent = Math.round(w) + ' × ' + Math.round(h);
+  }, true);
+  document.addEventListener('mouseup', function (e) {
+    if (!measuring || !mStart) return;
+    var w = Math.abs(e.clientX - mStart.x), h = Math.abs(e.clientY - mStart.y);
+    mStart = null;
+    emit({ kind: 'measured', w: Math.round(w), h: Math.round(h) });
+  }, true);
+
+  /* ---- right-click anywhere in the page ---- */
+  document.addEventListener('contextmenu', function (e) {
+    if (isOverlay(e.target)) return;
+    e.preventDefault();
+    var sel = '';
+    try { sel = String(window.getSelection() || ''); } catch (er) {}
+    emit({
+      kind: 'contextmenu',
+      x: e.clientX, y: e.clientY,
+      node: brief(e.target),
+      selection: sel.slice(0, 4000),
+      editable: !!(e.target.isContentEditable ||
+        /^(input|textarea)$/i.test(e.target.tagName || ''))
+    });
+  }, true);
+
+  /* ---- request handling ---- */
+  function children(el) {
+    var out = [], n = el.firstElementChild;
+    while (n) { out.push(brief(n)); n = n.nextElementSibling; }
+    return out;
+  }
+  function ancestors(el) {
+    var out = [], cur = el.parentElement;
+    while (cur) { out.unshift(brief(cur)); cur = cur.parentElement; }
+    return out;
+  }
+
+  window.addEventListener('message', function (e) {
+    var d = e && e.data;
+    if (!d || d.__jscBridge !== 'inspect') return;
+    var id = d.id;
+    var el = d.path ? nodeAt(d.path) : null;
+    try {
+      switch (d.action) {
+        case 'root':
+          reply({ id: id, root: brief(document.documentElement), kids: children(document.documentElement) });
+          return;
+        case 'children':
+          reply({ id: id, kids: el ? children(el) : [] });
+          return;
+        case 'select':
+          if (!el) { reply({ id: id, gone: true }); return; }
+          showHighlight(el);
+          reply({
+            id: id,
+            node: brief(el),
+            attrs: Array.prototype.map.call(el.attributes, function (a) { return { name: a.name, value: a.value }; }),
+            outerHTML: el.outerHTML.length > 20000 ? el.outerHTML.slice(0, 20000) + '…' : el.outerHTML,
+            innerHTML: el.innerHTML.length > 20000 ? el.innerHTML.slice(0, 20000) + '…' : el.innerHTML,
+            rules: matchedRules(el),
+            computed: computedOf(el),
+            box: boxOf(el),
+            events: eventsOf(el),
+            a11y: a11yOf(el),
+            ancestors: ancestors(el),
+            kids: children(el)
+          });
+          return;
+        case 'highlight':
+          if (d.on === false || !el) hideHighlight(); else showHighlight(el);
+          reply({ id: id, ok: true });
+          return;
+        case 'unhighlight':
+          hideHighlight();
+          reply({ id: id, ok: true });
+          return;
+        case 'scrollIntoView':
+          if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          reply({ id: id, ok: !!el });
+          return;
+        case 'pick': setPick(d.on !== false); reply({ id: id, ok: true }); return;
+        case 'measure': setMeasure(d.on !== false); reply({ id: id, ok: true }); return;
+        case 'forceState':
+          if (el) forceState(el, d.state, d.on !== false);
+          reply({ id: id, ok: !!el });
+          return;
+        case 'setStyle':
+          if (el) {
+            if (d.value === '') el.style.removeProperty(d.prop);
+            else el.style.setProperty(d.prop, d.value, d.important ? 'important' : '');
+            showHighlight(el);
+          }
+          reply({ id: id, ok: !!el, box: el ? boxOf(el) : null });
+          return;
+        case 'setAttr':
+          if (el) {
+            if (d.value === null) el.removeAttribute(d.name);
+            else el.setAttribute(d.name, d.value);
+          }
+          reply({ id: id, ok: !!el });
+          return;
+        case 'setHTML':
+          if (el) {
+            try { el.outerHTML = d.html; }
+            catch (er) { reply({ id: id, ok: false, error: String(er) }); return; }
+          }
+          reply({ id: id, ok: !!el });
+          return;
+        case 'setText':
+          if (el) el.textContent = d.text;
+          reply({ id: id, ok: !!el });
+          return;
+        case 'remove':
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+          hideHighlight();
+          reply({ id: id, ok: !!el });
+          return;
+        case 'sample':
+          if (el) {
+            var cs2 = getComputedStyle(el);
+            reply({ id: id, colors: { color: cs2.color, background: cs2.backgroundColor,
+                                      border: cs2.borderTopColor, outline: cs2.outlineColor } });
+          } else reply({ id: id, colors: null });
+          return;
+        case 'find': {
+          var hits = [];
+          try {
+            document.querySelectorAll(d.selector).forEach(function (n) {
+              if (hits.length < 200) hits.push(brief(n));
+            });
+          } catch (er) {}
+          reply({ id: id, hits: hits });
+          return;
+        }
+        case 'search': {
+          var q = String(d.query || '').toLowerCase();
+          var found = [];
+          if (q) {
+            var all = document.getElementsByTagName('*');
+            for (var i = 0; i < all.length && found.length < 200; i++) {
+              var n2 = all[i];
+              if (n2.closest('[data-jsc-overlay]')) continue;
+              if (label(n2).toLowerCase().indexOf(q) !== -1) found.push(brief(n2));
+            }
+          }
+          reply({ id: id, hits: found });
+          return;
+        }
+      }
+    } catch (err) {
+      reply({ id: id, error: String(err && err.message || err) });
+    }
+  });
+
+  window.__inspectAgent = true;
+  emit({ kind: 'agent-ready' });
+}
+
 /** Given the HTML source of a preview page, inject the bridge shim near <head>
  *  start (or at the top if there's no head). Idempotent — never injects twice. */
 function __jscInjectPreviewBridge(html, fileName) {
   if (!html || html.indexOf('__jscBridge') !== -1) return html;
-  const shim = __jscBuildBridgeScript(fileName);
+  const shim = __jscBuildBridgeScript(fileName)
+    + '<scr' + 'ipt>(' + __jscInspectorAgent.toString() + ')();<\/scr' + 'ipt>';
   if (/<head[^>]*>/i.test(html)) return html.replace(/<head([^>]*)>/i, '<head$1>' + shim);
   if (/<html[^>]*>/i.test(html)) return html.replace(/<html([^>]*)>/i, '<html$1>' + shim);
   return shim + html;
@@ -11083,10 +12106,26 @@ const contextMenu = document.getElementById('custom-context-menu');
 window.currentColorRange = null;
 window.currentColorValue = null;
 
-editor.container.addEventListener('contextmenu', function(e) {
-  e.preventDefault();
-  e.stopImmediatePropagation();
-  const coords = editor.renderer.screenToTextCoordinates(e.clientX, e.clientY);
+/* Touch devices get a different deal.  A long press is the browser's own
+   "start selecting text" gesture, and firing our menu in the middle of it
+   kills the selection before it begins — so on touch the menu is suppressed
+   at contextmenu time and raised on release instead, and only when the finger
+   did not travel (i.e. the user was not dragging out a selection).
+   Ace brings its own touch handling, so it keeps the desktop path. */
+const CTX_TOUCH = (function () {
+  try {
+    if (!('ontouchstart' in window) && !(navigator.maxTouchPoints > 0)) return false;
+    return !(window.matchMedia && window.matchMedia('(pointer: fine)').matches);
+  } catch (e) { return false; }
+})();
+function ctxTouchMode() {
+  if (!CTX_TOUCH) return false;
+  const eng = window.__EDITOR_ENGINE_FELL_BACK ? 'cm6' : (window.__EDITOR_ENGINE || 'cm-latest');
+  return eng !== 'ace';
+}
+
+function openEditorContextMenu(clientX, clientY) {
+  const coords = editor.renderer.screenToTextCoordinates(clientX, clientY);
   const row = Math.max(0, coords.row);
   const line = editor.session.getLine(row) || "";
   window.currentColorRange = null;
@@ -11112,12 +12151,53 @@ editor.container.addEventListener('contextmenu', function(e) {
   contextMenu.style.top = '0px';
   contextMenu.style.display = 'block';
   const box = contextMenu.getBoundingClientRect();
-  const x = Math.max(6, Math.min(e.clientX, window.innerWidth - box.width - 8));
-  const y = Math.max(6, Math.min(e.clientY, window.innerHeight - box.height - 8));
+  const x = Math.max(6, Math.min(clientX, window.innerWidth - box.width - 8));
+  const y = Math.max(6, Math.min(clientY, window.innerHeight - box.height - 8));
   contextMenu.style.left = x + 'px';
   contextMenu.style.top = y + 'px';
   contextMenu.style.visibility = '';
+}
+window.openEditorContextMenu = openEditorContextMenu;
+
+editor.container.addEventListener('contextmenu', function (e) {
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  /* On touch we still swallow the OS menu, but hold ours back until the
+     finger lifts. Double-tap-hold-and-drag never raises contextmenu at all,
+     so that gesture keeps selecting text exactly as the browser intends. */
+  if (ctxTouchMode()) {
+    const t = (e.touches && e.touches[0]) || null;
+    ctxPending = {
+      x: t ? t.clientX : e.clientX,
+      y: t ? t.clientY : e.clientY
+    };
+    return;
+  }
+  openEditorContextMenu(e.clientX, e.clientY);
 });
+
+/* The long press that armed the menu, if the finger has not moved since. */
+let ctxPending = null;
+editor.container.addEventListener('touchmove', function (e) {
+  if (!ctxPending) return;
+  const t = e.touches && e.touches[0];
+  if (!t) return;
+  /* Travel means the user is dragging out a selection — stand down. */
+  if (Math.abs(t.clientX - ctxPending.x) > 12 || Math.abs(t.clientY - ctxPending.y) > 12) {
+    ctxPending = null;
+  }
+}, { passive: true });
+editor.container.addEventListener('touchend', function (e) {
+  if (!ctxPending) return;
+  const p = ctxPending;
+  ctxPending = null;
+  const t = (e.changedTouches && e.changedTouches[0]) || null;
+  if (t && (Math.abs(t.clientX - p.x) > 12 || Math.abs(t.clientY - p.y) > 12)) return;
+  /* One frame of daylight, so the document-level "click closes the menu"
+     handler does not eat the menu we are about to open. */
+  setTimeout(function () { openEditorContextMenu(p.x, p.y); }, 0);
+});
+editor.container.addEventListener('touchcancel', function () { ctxPending = null; });
 
 /* Grey out the rows that cannot do anything right now, and drop the JS-only
    one for files that hold no JavaScript. */
@@ -12391,13 +13471,27 @@ setTimeout(() => document.querySelectorAll('.draggable-window').forEach(makeDrag
     positionTabsDropdown();
     tabsDropdown.classList.toggle('open');
   });
-  window.addEventListener('scroll', () => tabsDropdown.classList.remove('open'), true);
+  /* A phone keyboard opening scrolls the page and resizes the viewport.  Both
+     used to slam the dropdown shut the instant the search box was tapped, so
+     neither counts while the focus is inside the dropdown. */
+  function tabsDDBusy() {
+    const a = document.activeElement;
+    return !!(a && tabsDropdown.contains(a));
+  }
+  window.addEventListener('scroll', (e) => {
+    if (tabsDDBusy()) return;
+    if (e.target && e.target.nodeType && tabsDropdown.contains(e.target)) return;
+    tabsDropdown.classList.remove('open');
+  }, true);
   document.addEventListener('click', (e) => {
     if (!tabsDropdown.contains(e.target) && !tabsToggleBtn.contains(e.target)) {
       tabsDropdown.classList.remove('open');
     }
   });
-  window.addEventListener('resize', () => renderTabs());
+  window.addEventListener('resize', () => {
+    if (tabsDDBusy()) { positionTabsDropdown(); return; }
+    renderTabs();
+  });
 
   // ---- Hook openFile / saveCurrentFile / delete for tabs -------------------
   const _origOpenFile = window.openFile;
@@ -23157,8 +24251,16 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
   var warnN = 0, errN = 0;
 
   function pvCounts() {
-    if (cWarn) { cWarn.hidden = !warnN; cWarn.textContent = warnN + ' warn'; }
-    if (cErr) { cErr.hidden = !errN; cErr.textContent = errN + ' error' + (errN === 1 ? '' : 's'); }
+    if (cWarn) {
+      cWarn.hidden = !warnN;
+      cWarn.querySelector('b').textContent = warnN > 1 ? warnN : '';
+      cWarn.title = warnN + ' warning' + (warnN === 1 ? '' : 's');
+    }
+    if (cErr) {
+      cErr.hidden = !errN;
+      cErr.querySelector('b').textContent = errN > 1 ? errN : '';
+      cErr.title = errN + ' error' + (errN === 1 ? '' : 's');
+    }
   }
   /* The button says one thing and one thing only: whether the preview has
      produced a warning or an error. No counts, no badge. */
@@ -23315,6 +24417,9 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
     document.body.classList.toggle('preview-open', on);
     if (on) pvReset();
     else { pvModal.classList.remove('pvc-open'); pvPane.style.height = ''; }
+    /* Closing the panel — or the whole window — has to give the width back,
+       or the modal reopens still stretched for a panel that is not there. */
+    pvSyncWidth();
   }
   new MutationObserver(syncPreview).observe(pvModal, { attributes: true, attributeFilter: ['style'] });
   syncPreview();
@@ -23608,6 +24713,1183 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       showToast('Monaco could not be downloaded — reload, or pick another engine in Settings', 'error', 6000);
     }
   });
+})();
+</script>
+
+<div id="pv-context-menu" role="menu" aria-label="Preview actions"></div>
+
+<script>
+/* ==========================================================================
+   INSPECTION SIDEBAR
+   --------------------------------------------------------------------------
+   The preview's console pane grew tabs: Console, Elements, Code, Styles, Box,
+   JS Events and A11y.  It talks to the agent injected into the preview over
+   the same postMessage bridge the console already used, so it keeps working
+   whatever the sandbox allows.
+
+   Everything here is best-effort about source mapping: a live DOM node has no
+   guaranteed line number, so when an element cannot be located in the file the
+   panel still shows the node and says so rather than jumping somewhere wrong.
+   ========================================================================== */
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+
+  var dock    = $('pv-console');
+  var modal   = $('preview-modal');
+  var tabsBar = $('pvc-tabs');
+  var panes   = $('pvc-panes');
+  var menu    = $('pv-context-menu');
+  if (!dock || !modal || !tabsBar) return;
+
+  function frame() { return $('code-preview'); }
+  function fwin() { var f = frame(); return f && f.contentWindow; }
+  function toast(m, k) { if (typeof showToast === 'function') showToast(m, k || 'success'); }
+  function esc(t) {
+    return String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ======================================================================
+     Bridge plumbing
+     ====================================================================== */
+  var seq = 1;
+  var waiting = {};
+  var agentUp = false;
+
+  function ask(action, params, timeout) {
+    return new Promise(function (resolve) {
+      var w = fwin();
+      if (!w) { resolve(null); return; }
+      var id = 'i' + (seq++);
+      var done = false;
+      waiting[id] = function (d) { done = true; delete waiting[id]; resolve(d); };
+      try { w.postMessage(Object.assign({ __jscBridge: 'inspect', id: id, action: action }, params || {}), '*'); }
+      catch (e) { delete waiting[id]; resolve(null); return; }
+      setTimeout(function () { if (!done) { delete waiting[id]; resolve(null); } }, timeout || 4000);
+    });
+  }
+
+  window.addEventListener('message', function (e) {
+    var d = e && e.data;
+    if (!d) return;
+    if (d.__jscBridge === 'inspect-result') {
+      var fn = waiting[d.id];
+      if (fn) fn(d);
+      return;
+    }
+    if (d.__jscBridge !== 'inspect-event') return;
+    if (d.kind === 'agent-ready') { agentUp = true; onAgentReady(); return; }
+    if (d.kind === 'picked') { setPick(false); select(d.node.path, true); openDock('elements'); return; }
+    if (d.kind === 'pick-cancelled') { setPick(false); return; }
+    if (d.kind === 'measured') { toast('Measured ' + d.w + ' × ' + d.h + ' px'); return; }
+    if (d.kind === 'contextmenu') { showPreviewMenu(d); return; }
+  });
+
+  function onAgentReady() {
+    /* A reload wipes the DOM, so anything selected is stale — unless the
+       user pinned it, in which case try to find it again by selector. */
+    if (pinned && pinnedSel) {
+      ask('find', { selector: pinnedSel }).then(function (r) {
+        if (r && r.hits && r.hits.length) select(r.hits[0].path, false);
+        else { current = null; paintAll(); }
+      });
+    } else if (current) {
+      current = null;
+      paintAll();
+    }
+    if (activePane() !== 'console') loadTree();
+  }
+
+  /* ======================================================================
+     Dock tabs
+     ====================================================================== */
+  function activePane() {
+    var t = tabsBar.querySelector('.pvc-tab.active');
+    return t ? t.dataset.pane : 'console';
+  }
+  function showPane(name) {
+    tabsBar.querySelectorAll('.pvc-tab').forEach(function (t) {
+      var on = t.dataset.pane === name;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    panes.querySelectorAll('.pvc-pane').forEach(function (p) {
+      p.hidden = p.dataset.pane !== name;
+    });
+    /* The warning / error count belongs to the console and nowhere else. */
+    var counts = $('pvc-counts');
+    if (counts) counts.hidden = (name !== 'console');
+    if (name !== 'console' && !treeLoaded) loadTree();
+    if (name !== 'console') paintAll();
+  }
+  tabsBar.addEventListener('click', function (e) {
+    var t = e.target.closest('.pvc-tab');
+    if (t) showPane(t.dataset.pane);
+  });
+
+  function openDock(pane) {
+    if (!modal.classList.contains('pvc-open')) {
+      if (window.__pvConsole && window.__pvConsole.toggle) window.__pvConsole.toggle(true);
+      else modal.classList.add('pvc-open');
+    }
+    if (pane) showPane(pane);
+  }
+  window.__openInspector = function (pane) { openDock(pane || 'elements'); };
+
+  /* The console button owns the Console tab: reopening from it should land
+     there, not on whichever inspector tab was last used. */
+  var consoleBtn = $('pv-console-btn');
+  if (consoleBtn) consoleBtn.addEventListener('click', function () {
+    if (modal.classList.contains('pvc-open')) showPane('console');
+  });
+
+  var inspectBtn = $('pv-inspect-btn');
+  if (inspectBtn) inspectBtn.addEventListener('click', function () {
+    var alreadyInspecting = modal.classList.contains('pvc-open') && activePane() !== 'console';
+    if (alreadyInspecting && picking) { setPick(false); return; }
+    openDock('elements');
+    setPick(true);
+  });
+
+  /* ======================================================================
+     State
+     ====================================================================== */
+  var current = null;        // the full `select` reply for the chosen node
+  var treeLoaded = false;
+  var expanded = {};         // path key -> true
+  var picking = false;
+  var measuring = false;
+  var pinned = false, pinnedSel = '';
+  var forcedStates = {};
+
+  function keyOf(path) { return (path || []).join('.'); }
+
+  /* ======================================================================
+     Elements tree
+     ====================================================================== */
+  var tree = $('ins-tree');
+  var crumbs = $('ins-crumbs');
+  var treeSearch = $('ins-search');
+
+  /* Hovering a row previews it; leaving the tree falls back to whatever is
+     actually selected, and to nothing at all when nothing is. */
+  function restoreHighlight() {
+    if (current) ask('highlight', { path: current.node.path });
+    else ask('unhighlight');
+  }
+  if (tree) tree.addEventListener('mouseleave', restoreHighlight);
+
+  function loadTree() {
+    if (!tree) return;
+    if (!current) ask('unhighlight');
+    tree.innerHTML = '<div class="ins-empty">Reading the preview…</div>';
+    ask('root').then(function (r) {
+      treeLoaded = true;
+      if (!r || !r.root) {
+        tree.innerHTML = '<div class="ins-empty">No live preview to inspect.<br>Open an HTML file and press Preview.</div>';
+        return;
+      }
+      expanded[keyOf(r.root.path)] = true;
+      tree.innerHTML = '';
+      tree.appendChild(nodeRow(r.root, 0));
+      renderKids(r.root, r.kids, 0);
+    });
+  }
+
+  function nodeRow(n, depth) {
+    var row = document.createElement('div');
+    row.className = 'ins-node' + (current && keyOf(current.node.path) === keyOf(n.path) ? ' sel' : '');
+    row.dataset.key = keyOf(n.path);
+    row.style.paddingLeft = (6 + depth * 13) + 'px';
+    var open = !!expanded[keyOf(n.path)];
+    var html = '<span class="ins-twist' + (n.kids ? '' : ' leaf') + '">' + (open ? '▾' : '▸') + '</span>'
+      + '<span class="ins-tag">&lt;' + esc(n.tag) + '</span>'
+      + (n.id ? '<span class="ins-id"> #' + esc(n.id) + '</span>' : '')
+      + (n.cls ? '<span class="ins-cls"> .' + esc(n.cls.trim().split(/\s+/).slice(0, 3).join('.')) + '</span>' : '')
+      + '<span class="ins-tag">&gt;</span>'
+      + (n.text ? '<span class="ins-txt">' + esc(n.text) + '</span>' : '');
+    row.innerHTML = html;
+    row.addEventListener('click', function (e) {
+      if (e.target.closest('.ins-twist') && n.kids) { toggle(n, depth); return; }
+      select(n.path, true);
+    });
+    row.addEventListener('mouseenter', function () { ask('highlight', { path: n.path }); });
+    row.addEventListener('mouseleave', restoreHighlight);
+    row.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      select(n.path, false);
+      showNodeMenu(n, e.clientX, e.clientY);
+    });
+    return row;
+  }
+
+  function renderKids(parentNode, kids, depth) {
+    var host = document.createElement('div');
+    host.dataset.kidsOf = keyOf(parentNode.path);
+    (kids || []).forEach(function (k) {
+      host.appendChild(nodeRow(k, depth + 1));
+      if (expanded[keyOf(k.path)]) {
+        ask('children', { path: k.path }).then(function (r) {
+          if (r) renderKids(k, r.kids, depth + 1);
+        });
+      }
+    });
+    var anchor = tree.querySelector('.ins-node[data-key="' + keyOf(parentNode.path) + '"]');
+    var old = tree.querySelector('[data-kids-of="' + keyOf(parentNode.path) + '"]');
+    if (old) old.remove();
+    if (anchor && anchor.nextSibling) anchor.parentNode.insertBefore(host, anchor.nextSibling);
+    else tree.appendChild(host);
+  }
+
+  function toggle(n, depth) {
+    var k = keyOf(n.path);
+    if (expanded[k]) {
+      delete expanded[k];
+      var old = tree.querySelector('[data-kids-of="' + k + '"]');
+      if (old) old.remove();
+      var row = tree.querySelector('.ins-node[data-key="' + k + '"] .ins-twist');
+      if (row) row.textContent = '▸';
+      return;
+    }
+    expanded[k] = true;
+    var tw = tree.querySelector('.ins-node[data-key="' + k + '"] .ins-twist');
+    if (tw) tw.textContent = '▾';
+    ask('children', { path: n.path }).then(function (r) {
+      if (r) renderKids(n, r.kids, depth);
+    });
+  }
+
+  if (treeSearch) {
+    var stimer = null;
+    treeSearch.addEventListener('input', function () {
+      clearTimeout(stimer);
+      stimer = setTimeout(function () {
+        var q = treeSearch.value.trim();
+        if (!q) { treeLoaded = false; loadTree(); return; }
+        ask('search', { query: q }).then(function (r) {
+          tree.innerHTML = '';
+          var hits = (r && r.hits) || [];
+          if (!hits.length) {
+            tree.innerHTML = '<div class="ins-empty">Nothing in the preview matches “' + esc(q) + '”.</div>';
+            return;
+          }
+          hits.forEach(function (n) { tree.appendChild(nodeRow(n, 0)); });
+        });
+      }, 220);
+    });
+    treeSearch.addEventListener('keydown', function (e) { e.stopPropagation(); });
+  }
+
+  function paintCrumbs() {
+    if (!crumbs) return;
+    crumbs.innerHTML = '';
+    if (!current) { crumbs.textContent = 'Nothing selected'; return; }
+    var chain = (current.ancestors || []).concat([current.node]);
+    chain.forEach(function (n, i) {
+      if (i) {
+        var s = document.createElement('span');
+        s.className = 'ins-crumb-sep';
+        s.textContent = ' › ';
+        crumbs.appendChild(s);
+      }
+      var c = document.createElement('span');
+      c.className = 'ins-crumb' + (i === chain.length - 1 ? ' last' : '');
+      c.textContent = n.label;
+      c.addEventListener('click', function () { select(n.path, true); });
+      crumbs.appendChild(c);
+    });
+    crumbs.scrollLeft = crumbs.scrollWidth;
+  }
+
+  /* ======================================================================
+     Selection
+     ====================================================================== */
+  function select(path, reveal) {
+    return ask('select', { path: path }).then(function (r) {
+      if (!r || r.gone || !r.node) { toast('That element is no longer in the preview', 'error'); return; }
+      current = r;
+      if (pinned) pinnedSel = r.node.selector;
+      tree.querySelectorAll('.ins-node').forEach(function (n) {
+        n.classList.toggle('sel', n.dataset.key === keyOf(r.node.path));
+      });
+      if (reveal) {
+        var row = tree.querySelector('.ins-node[data-key="' + keyOf(r.node.path) + '"]');
+        if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+      }
+      paintAll();
+      return r;
+    });
+  }
+  window.__inspectSelect = select;
+
+  /* Only the pane on screen is repainted; the rest catch up when shown. */
+  var PAINT = {
+    elements: function () { paintCrumbs(); paintProps(); },
+    code: paintCode, styles: paintStyles, box: paintBox,
+    events: paintEvents, a11y: paintA11y
+  };
+  function paintAll() {
+    if (!current) ask('unhighlight');
+    var fn = PAINT[activePane()];
+    if (fn) fn();
+    if (activePane() !== 'elements') paintCrumbs();
+  }
+
+  function nothing(host) {
+    host.innerHTML = '<div class="ins-empty">Select an element.</div>';
+  }
+
+  /* ======================================================================
+     Source mapping — best effort, and honest when it misses
+     ====================================================================== */
+  function srcText() {
+    try { return editor.getValue() || ''; } catch (e) { return ''; }
+  }
+  function lineOf(src, idx) { return src.slice(0, idx).split('\n').length; }
+  function reEsc(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  /** Where in the open file does this live node's opening tag start? */
+  function findNodeSource(node) {
+    var src = srcText();
+    if (!src || !node) return null;
+    var tag = reEsc(node.tag);
+    var m;
+    if (node.id) {
+      m = new RegExp('<' + tag + '\\b[^>]*\\bid\\s*=\\s*["\']?' + reEsc(node.id) + '["\'\\s>]', 'i').exec(src);
+      if (m) return { index: m.index, line: lineOf(src, m.index), how: 'id' };
+    }
+    var classes = (node.cls || '').trim().split(/\s+/).filter(Boolean);
+    if (classes.length) {
+      /* Most specific class first: a one-off class is a far better anchor
+         than a utility one that appears fifty times. */
+      var byRarity = classes.slice().sort(function (a, b) {
+        return (src.split(a).length) - (src.split(b).length);
+      });
+      for (var i = 0; i < byRarity.length; i++) {
+        var re = new RegExp('<' + tag + '\\b[^>]*\\bclass\\s*=\\s*["\'][^"\']*\\b' + reEsc(byRarity[i]) + '\\b', 'gi');
+        var hits = [];
+        while ((m = re.exec(src)) !== null) { hits.push(m.index); if (hits.length > 1) break; }
+        if (hits.length === 1) return { index: hits[0], line: lineOf(src, hits[0]), how: 'class .' + byRarity[i] };
+      }
+    }
+    var all = [];
+    var re2 = new RegExp('<' + tag + '\\b', 'gi');
+    while ((m = re2.exec(src)) !== null) all.push(m.index);
+    if (all.length === 1) return { index: all[0], line: lineOf(src, all[0]), how: 'the only <' + node.tag + '>' };
+    return null;
+  }
+
+  /** The whole element in the source, opening tag through matching close. */
+  function findNodeRange(node) {
+    var hit = findNodeSource(node);
+    if (!hit) return null;
+    var src = srcText();
+    var gt = src.indexOf('>', hit.index);
+    if (gt === -1) return null;
+    var end = gt + 1;
+    if (typeof findMatchingCloseTag === 'function') {
+      var close = findMatchingCloseTag(src, node.tag, end);
+      if (close !== -1) {
+        var closeEnd = src.indexOf('>', close);
+        if (closeEnd !== -1) end = closeEnd + 1;
+      }
+    }
+    return { start: hit.index, end: end, line: hit.line, how: hit.how };
+  }
+
+  function jumpTo(line, column) {
+    try {
+      modal.style.display = 'none';
+      editor.gotoLine(line, column || 0);
+      editor.focus();
+    } catch (e) {}
+  }
+
+  function revealNode() {
+    if (!current) return;
+    var hit = findNodeSource(current.node);
+    if (!hit) {
+      toast('Could not pin this element down in the source — it may be built by script', 'error');
+      return;
+    }
+    toast('Matched by ' + hit.how);
+    jumpTo(hit.line, 0);
+  }
+
+  /** Where does a CSS selector's rule start in the open file? */
+  function findRuleSource(sel) {
+    var src = srcText();
+    if (!src || !sel) return null;
+    var re = new RegExp('(^|[}\\n;])\\s*' + reEsc(sel).replace(/\\\s+/g, '\\s+') + '\\s*\\{', 'm');
+    var m = re.exec(src);
+    if (!m) return null;
+    var at = m.index + m[0].indexOf(sel.trim()[0]);
+    return { index: at, line: lineOf(src, at) };
+  }
+
+  /* ======================================================================
+     Elements pane — the tree, and what the selected node *is*
+     ====================================================================== */
+  function paintProps() {
+    var host = $('ins-props');
+    if (!host) return;
+    if (!current) { nothing(host); return; }
+    var n = current.node;
+    host.innerHTML =
+      '<div class="ins-kv"><span class="k">selector</span>'
+        + '<span class="v" style="word-break:break-all">' + esc(n.selector) + '</span></div>'
+      + '<div class="ins-kv"><span class="k">children</span><span class="v">' + n.kids + '</span></div>'
+      + '<div class="ins-h">Attributes</div><div id="ins-attrs"></div>'
+      + '<div>'
+        + '<button class="ins-btn primary" id="ins-locate">Locate…</button>'
+        + '<button class="ins-btn" id="ins-scrollto">Scroll into view</button>'
+        + '<button class="ins-btn" id="ins-copysel">Copy selector</button>'
+      + '</div>';
+
+    var ah = $('ins-attrs');
+    (current.attrs || []).forEach(function (a) {
+      var row = document.createElement('div');
+      row.className = 'ins-kv';
+      row.innerHTML = '<span class="k">' + esc(a.name) + '</span>';
+      var v = document.createElement('span');
+      v.className = 'v';
+      v.contentEditable = 'true';
+      v.spellcheck = false;
+      v.textContent = a.value;
+      v.addEventListener('blur', function () {
+        ask('setAttr', { path: n.path, name: a.name, value: v.textContent })
+          .then(function () { toast('Set ' + a.name + ' in the preview'); });
+      });
+      v.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); v.blur(); }
+      });
+      row.appendChild(v);
+      ah.appendChild(row);
+    });
+    if (!(current.attrs || []).length) ah.innerHTML = '<span style="color:#8fa3b5">None.</span>';
+
+    $('ins-locate').addEventListener('click', locateNode);
+    $('ins-scrollto').addEventListener('click', function () { ask('scrollIntoView', { path: n.path }); });
+    $('ins-copysel').addEventListener('click', function () {
+      navigator.clipboard.writeText(n.selector)
+        .then(function () { toast('Copied ' + n.selector); })
+        .catch(function () { toast('Clipboard refused', 'error'); });
+    });
+  }
+
+  /** Put the caret on the element and select the lines it occupies, so the
+   *  editor shows you exactly how far it runs rather than just a line number. */
+  function locateNode() {
+    if (!current) return;
+    var range = findNodeRange(current.node);
+    if (!range) {
+      toast('Could not pin this element down in the source — it may be built by script', 'error');
+      return;
+    }
+    var src = srcText();
+    var rowOf = function (i) { return lineOf(src, i) - 1; };
+    var colOf = function (i) { return i - (src.lastIndexOf('\n', i - 1) + 1); };
+    var a = rowOf(range.start), b = rowOf(range.end);
+    modal.style.display = 'none';
+    try {
+      editor.selection.setRange(new ace.Range(a, colOf(range.start), b, colOf(range.end)));
+      editor.scrollToLine(a);
+      editor.focus();
+    } catch (e) { jumpTo(a + 1, 0); }
+    toast(a === b ? 'Line ' + (a + 1) + ' — matched by ' + range.how
+                  : 'Lines ' + (a + 1) + '–' + (b + 1) + ' — matched by ' + range.how);
+  }
+
+  /* ======================================================================
+     Code pane — the element's markup, and nothing else
+     ====================================================================== */
+  function paintCode() {
+    var host = $('ins-code');
+    if (!host) return;
+    if (!current) { nothing(host); return; }
+    var n = current.node;
+    var hit = findNodeSource(n);
+    host.innerHTML =
+      '<textarea class="ins-code-box" id="ins-html" spellcheck="false"></textarea>'
+      + '<div>'
+        + '<button class="ins-btn primary" id="ins-html-apply">Apply to preview</button>'
+        + '<button class="ins-btn" id="ins-html-source"' + (hit ? '' : ' disabled') + '>Write to the file</button>'
+        + '<button class="ins-btn" id="ins-html-locate"' + (hit ? '' : ' disabled') + '>Locate…</button>'
+        + '<button class="ins-btn" id="ins-html-copy">Copy</button>'
+      + '</div>'
+      + '<div class="ins-note">'
+        + (hit ? 'In the file at line <b>' + hit.line + '</b>, matched by ' + esc(hit.how) + '.'
+               : 'Not in the open file — it may be generated by script, or live somewhere else.')
+      + '</div>';
+
+    $('ins-html').value = current.outerHTML || '';
+    $('ins-html-apply').addEventListener('click', function () {
+      var html = $('ins-html').value;
+      ask('setHTML', { path: n.path, html: html }).then(function (r) {
+        if (!r || !r.ok) { toast((r && r.error) || 'The preview refused that markup', 'error'); return; }
+        toast('Applied to the preview (not saved to the file)');
+        treeLoaded = false; loadTree();
+        current = null; paintAll();
+      });
+    });
+    $('ins-html-source').addEventListener('click', writeHTMLToSource);
+    $('ins-html-locate').addEventListener('click', locateNode);
+    $('ins-html-copy').addEventListener('click', function () {
+      navigator.clipboard.writeText($('ins-html').value)
+        .then(function () { toast('Copied the markup'); })
+        .catch(function () { toast('Clipboard refused', 'error'); });
+    });
+  }
+
+  function writeHTMLToSource() {
+    if (!current) return;
+    var range = findNodeRange(current.node);
+    if (!range) { toast('Could not locate the element in the file', 'error'); return; }
+    var html = $('ins-html').value;
+    var src = srcText();
+    var before = src.slice(range.start, range.end);
+    if (before === html) { toast('The file already says that'); return; }
+    if (!confirm('Replace this element in ' + (currentFile || 'the file') + '?\n\n'
+      + 'Line ' + range.line + ', matched by ' + range.how + '.\n\nUndo with Ctrl+Z.')) return;
+    var next = src.slice(0, range.start) + html + src.slice(range.end);
+    try {
+      var s = editor.session, last = s.getLength() - 1;
+      s.replace(new ace.Range(0, 0, last, s.getLine(last).length), next);
+      editor.clearSelection();
+      toast('Written to ' + (currentFile || 'the file'));
+    } catch (e) { toast('Could not edit the file', 'error'); }
+  }
+
+  /* ======================================================================
+     Styles pane
+     ====================================================================== */
+  var computedFilter = '';
+  function paintStyles() {
+    var host = $('ins-styles');
+    if (!host) return;
+    if (!current) { nothing(host); return; }
+    var n = current.node;
+
+    var html = '<div class="ins-h">Quick toggles</div><div class="ins-card" id="ins-quick"></div>'
+      + '<div class="ins-h">Matched rules</div><div id="ins-rules"></div>'
+      + '<div class="ins-h">Computed</div>'
+      + '<input class="ins-filter" id="ins-computed-filter" placeholder="Filter computed properties…" spellcheck="false">'
+      + '<div class="ins-card" id="ins-computed"></div>';
+    host.innerHTML = html;
+
+    /* quick toggles */
+    var q = $('ins-quick');
+    var comp = {};
+    (current.computed || []).forEach(function (c) { comp[c.prop] = c.value; });
+    [['display', ['block', 'inline-block', 'flex', 'grid', 'inline', 'none']],
+     ['visibility', ['visible', 'hidden']],
+     ['position', ['static', 'relative', 'absolute', 'fixed', 'sticky']]
+    ].forEach(function (pair) {
+      var row = document.createElement('div');
+      row.className = 'ins-kv';
+      row.innerHTML = '<span class="k">' + pair[0] + '</span>';
+      var sel = document.createElement('select');
+      sel.style.cssText = 'flex:1 1 auto;min-width:0;background:#16222f;color:#ecf0f1;border:1px solid #3d556e;border-radius:4px;font-family:inherit;font-size:12px;padding:2px 4px;';
+      var vals = pair[1].slice();
+      if (vals.indexOf(comp[pair[0]]) === -1) vals.unshift(comp[pair[0]]);
+      vals.forEach(function (v) {
+        var o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        if (v === comp[pair[0]]) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', function () {
+        ask('setStyle', { path: n.path, prop: pair[0], value: sel.value })
+          .then(function () { toast(pair[0] + ': ' + sel.value); });
+      });
+      row.appendChild(sel);
+      q.appendChild(row);
+    });
+    var opRow = document.createElement('div');
+    opRow.className = 'ins-kv';
+    opRow.innerHTML = '<span class="k">opacity</span>';
+    var op = document.createElement('input');
+    op.type = 'range'; op.min = '0'; op.max = '1'; op.step = '0.05';
+    op.value = comp.opacity || '1';
+    op.style.cssText = 'flex:1 1 auto;min-width:0;';
+    op.addEventListener('input', function () { ask('setStyle', { path: n.path, prop: 'opacity', value: op.value }); });
+    opRow.appendChild(op);
+    q.appendChild(opRow);
+
+    /* matched rules */
+    var rules = $('ins-rules');
+    if (!(current.rules || []).length) {
+      rules.innerHTML = '<div style="color:#8fa3b5;padding:6px 0">No stylesheet rule matches this element.</div>';
+    }
+    (current.rules || []).forEach(function (r) {
+      var box = document.createElement('div');
+      box.className = 'ins-rule' + (r.pseudo ? ' pseudo' : '');
+      var src = r.inline ? 'inline' : (r.sheet + (r.media ? ' @' + r.media : ''));
+      box.innerHTML = '<span class="ins-rule-src">' + esc(src) + '</span>'
+        + '<div class="ins-rule-sel">' + esc(r.sel) + ' {</div>';
+      r.decls.forEach(function (d) {
+        var line = document.createElement('div');
+        line.className = 'ins-decl';
+        var cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.checked = true;
+        cb.title = 'Toggle this declaration in the preview';
+        var p = document.createElement('span'); p.className = 'p'; p.textContent = d.prop + ':';
+        var v = document.createElement('span');
+        v.className = 'v'; v.contentEditable = 'true'; v.spellcheck = false;
+        v.textContent = d.value + (d.important ? ' !important' : '') + ';';
+        cb.addEventListener('change', function () {
+          line.classList.toggle('off', !cb.checked);
+          ask('setStyle', {
+            path: n.path, prop: d.prop,
+            value: cb.checked ? d.value : '', important: true
+          });
+        });
+        v.addEventListener('blur', function () {
+          var val = v.textContent.replace(/;\s*$/, '').trim();
+          var imp = /!important$/.test(val);
+          ask('setStyle', { path: n.path, prop: d.prop, value: val.replace(/\s*!important$/, ''), important: imp })
+            .then(function () { toast(d.prop + ': ' + val); paintBox(); });
+        });
+        v.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); v.blur(); } });
+        line.appendChild(cb); line.appendChild(p); line.appendChild(v);
+        box.appendChild(line);
+      });
+      var foot = document.createElement('div');
+      foot.innerHTML = '<span class="ins-rule-sel">}</span>';
+      box.appendChild(foot);
+      if (!r.inline) {
+        var jump = document.createElement('button');
+        jump.className = 'ins-btn';
+        jump.textContent = 'Edit this rule';
+        jump.addEventListener('click', function () {
+          var hit = findRuleSource(r.sel);
+          if (!hit) { toast('That rule is not in the open file', 'error'); return; }
+          jumpTo(hit.line, 0);
+        });
+        box.appendChild(jump);
+      }
+      rules.appendChild(box);
+    });
+
+    /* computed */
+    var cf = $('ins-computed-filter');
+    cf.value = computedFilter;
+    var paintComputed = function () {
+      var wrap = $('ins-computed');
+      wrap.innerHTML = '';
+      var q2 = computedFilter.trim().toLowerCase();
+      var rows = (current.computed || []).filter(function (c) {
+        return !q2 || c.prop.indexOf(q2) !== -1 || String(c.value).toLowerCase().indexOf(q2) !== -1;
+      });
+      if (!rows.length) { wrap.innerHTML = '<span style="color:#8fa3b5">Nothing matches.</span>'; return; }
+      rows.slice(0, 400).forEach(function (c) {
+        var row = document.createElement('div');
+        row.className = 'ins-kv';
+        row.innerHTML = '<span class="k">' + esc(c.prop) + '</span><span class="v">' + esc(c.value) + '</span>';
+        wrap.appendChild(row);
+      });
+      if (rows.length > 400) {
+        var more = document.createElement('div');
+        more.style.cssText = 'color:#8fa3b5;padding-top:6px';
+        more.textContent = '…and ' + (rows.length - 400) + ' more. Filter to narrow it down.';
+        wrap.appendChild(more);
+      }
+    };
+    cf.addEventListener('input', function () { computedFilter = cf.value; paintComputed(); });
+    cf.addEventListener('keydown', function (e) { e.stopPropagation(); });
+    paintComputed();
+  }
+
+  /* ======================================================================
+     Box pane
+     ====================================================================== */
+  function paintBox() {
+    var host = $('ins-box');
+    if (!host) return;
+    if (!current || !current.box) { nothing(host); return; }
+    var b = current.box, n = current.node;
+    var num = function (v) { return (Math.round(v * 100) / 100) || 0; };
+    var edit = function (prop, v) {
+      return '<span class="ins-bm-n" data-prop="' + prop + '" title="Click to change ' + prop + '">' + num(v) + '</span>';
+    };
+    host.innerHTML =
+      '<div class="ins-boxmodel">'
+      + '<div class="ins-bm-layer ins-bm-margin"><span class="ins-bm-tag">margin</span>'
+        + '<div class="ins-bm-row"><span>' + edit('margin-left', b.margin.l) + '</span>'
+        + '<span>' + edit('margin-top', b.margin.t) + ' / ' + edit('margin-bottom', b.margin.b) + '</span>'
+        + '<span>' + edit('margin-right', b.margin.r) + '</span></div>'
+        + '<div class="ins-bm-layer ins-bm-border"><span class="ins-bm-tag">border</span>'
+          + '<div class="ins-bm-row"><span>' + edit('border-left-width', b.border.l) + '</span>'
+          + '<span>' + edit('border-top-width', b.border.t) + ' / ' + edit('border-bottom-width', b.border.b) + '</span>'
+          + '<span>' + edit('border-right-width', b.border.r) + '</span></div>'
+          + '<div class="ins-bm-layer ins-bm-padding"><span class="ins-bm-tag">padding</span>'
+            + '<div class="ins-bm-row"><span>' + edit('padding-left', b.padding.l) + '</span>'
+            + '<span>' + edit('padding-top', b.padding.t) + ' / ' + edit('padding-bottom', b.padding.b) + '</span>'
+            + '<span>' + edit('padding-right', b.padding.r) + '</span></div>'
+            + '<div class="ins-bm-content">' + num(b.content.w) + ' × ' + num(b.content.h) + '</div>'
+          + '</div></div></div></div>'
+      + '<div class="ins-h">Geometry</div><div class="ins-card">'
+        + kv('border box', num(b.width) + ' × ' + num(b.height))
+        + kv('display', b.display) + kv('position', b.position) + kv('box-sizing', b.boxSizing)
+      + '</div>';
+
+    if (b.flex) {
+      host.insertAdjacentHTML('beforeend', '<div class="ins-h">Flex container</div><div class="ins-card">'
+        + kv('flex-direction', b.flex.direction) + kv('flex-wrap', b.flex.wrap) + kv('gap', b.flex.gap)
+        + kv('justify-content', b.flex.justify) + kv('align-items', b.flex.align)
+        + kv('align-content', b.flex.content) + '</div>');
+    }
+    if (b.grid) {
+      host.insertAdjacentHTML('beforeend', '<div class="ins-h">Grid container</div><div class="ins-card">'
+        + kv('grid-template-columns', b.grid.cols) + kv('grid-template-rows', b.grid.rows)
+        + kv('gap', b.grid.gap) + kv('justify-items', b.grid.justify)
+        + kv('align-items', b.grid.align) + kv('grid-auto-flow', b.grid.flow) + '</div>');
+    }
+    if (b.childOfFlex) {
+      host.insertAdjacentHTML('beforeend', '<div class="ins-h">As a flex item</div><div class="ins-card">'
+        + kv('flex-grow', b.childOfFlex.grow) + kv('flex-shrink', b.childOfFlex.shrink)
+        + kv('flex-basis', b.childOfFlex.basis) + kv('align-self', b.childOfFlex.self)
+        + kv('order', b.childOfFlex.order) + '</div>');
+    }
+
+    host.querySelectorAll('.ins-bm-n').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var prop = el.dataset.prop;
+        var next = prompt('Set ' + prop + ' on ' + n.label, el.textContent + 'px');
+        if (next === null) return;
+        ask('setStyle', { path: n.path, prop: prop, value: next.trim() }).then(function (r) {
+          if (r && r.box) { current.box = r.box; paintBox(); }
+          toast(prop + ': ' + next.trim());
+        });
+      });
+    });
+  }
+  function kv(k, v) {
+    return '<div class="ins-kv"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>';
+  }
+
+  /* ======================================================================
+     JS Events pane
+     ====================================================================== */
+  /* A category button parked in a pane's footer, opening its contents as a
+     dropdown rather than stacking every section down the pane. */
+  function catButton(foot, label, n, rows, head) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ins-cat';
+    b.innerHTML = '<span>' + esc(label) + '</span>'
+      + (n === null ? '' : '<span class="n">' + n + '</span>');
+    b.disabled = !rows.length;
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var r = b.getBoundingClientRect();
+      buildMenu(head || label, rows, r.left, r.top - 6 - Math.min(rows.length * 34 + 40, 400));
+    });
+    foot.appendChild(b);
+    return b;
+  }
+
+  var evShown = null;          // which listener the pane body is showing
+  function paintEvents() {
+    var host = $('ins-events');
+    var foot = $('ins-events-foot');
+    if (!host || !foot) return;
+    foot.innerHTML = '';
+    if (!current) { nothing(host); return; }
+
+    var evs = current.events || [];
+    var own = evs.filter(function (e) { return !e.inherited; });
+    var up  = evs.filter(function (e) { return e.inherited; });
+
+    var rowsFor = function (list) {
+      return list.map(function (ev) {
+        var flags = [];
+        if (ev.capture) flags.push('capture');
+        if (ev.passive) flags.push('passive');
+        if (ev.once) flags.push('once');
+        return {
+          label: ev.type + ' — ' + ev.name + (flags.length ? '  (' + flags.join(', ') + ')' : ''),
+          run: function () { evShown = ev; showListener(ev); }
+        };
+      });
+    };
+    catButton(foot, 'On this element', own.length, rowsFor(own), 'Listeners on ' + current.node.label);
+    catButton(foot, 'From ancestors', up.length, rowsFor(up), 'Listeners that reach this element');
+
+    if (evShown && evs.indexOf(evShown) === -1) evShown = null;
+    if (evShown) showListener(evShown);
+    else if (!evs.length) {
+      host.innerHTML = '<div class="ins-empty">Nothing listens to this element.</div>';
+    } else {
+      host.innerHTML = '<div class="ins-empty">' + evs.length + ' listener'
+        + (evs.length === 1 ? '' : 's') + ' — pick one below.</div>';
+    }
+  }
+
+  function showListener(ev) {
+    var host = $('ins-events');
+    if (!host) return;
+    var flags = [];
+    if (ev.capture) flags.push('capture');
+    if (ev.passive) flags.push('passive');
+    if (ev.once) flags.push('once');
+    host.innerHTML =
+      '<div class="ins-ev-head" style="cursor:default">'
+        + '<span class="ins-ev-type">' + esc(ev.type) + '</span>'
+        + '<span class="ins-ev-name">' + esc(ev.name) + (ev.where ? ' — ' + esc(ev.where) : '') + '</span>'
+      + '</div>'
+      + '<div>' + flags.map(function (f) { return '<span class="ins-pill">' + f + '</span>'; }).join('') + '</div>'
+      + '<div class="ins-ev-src" style="display:block"></div>'
+      + '<div><button class="ins-btn" id="ins-ev-find">Find in the file</button></div>';
+    host.querySelector('.ins-ev-src').textContent = ev.source;
+    $('ins-ev-find').addEventListener('click', function () { findHandlerInSource(ev); });
+    host.scrollTop = 0;
+  }
+
+  /** Look for the handler's own source text inside the open file. */
+  function findHandlerInSource(ev) {
+    var src = srcText();
+    if (!src) { toast('No file open', 'error'); return; }
+    if (ev.where === 'attribute') {
+      var i0 = src.indexOf(ev.source.trim().slice(0, 40));
+      if (i0 !== -1) { jumpTo(lineOf(src, i0), 0); return; }
+    }
+    if (ev.name && ev.name !== '(anonymous)') {
+      var re = new RegExp('(function\\s+' + reEsc(ev.name) + '\\b|\\b' + reEsc(ev.name) + '\\s*[:=]\\s*(function|\\())');
+      var m = re.exec(src);
+      if (m) { jumpTo(lineOf(src, m.index), 0); return; }
+    }
+    /* Fall back to the first distinctive line of the handler body. */
+    var lines = String(ev.source || '').split('\n')
+      .map(function (l) { return l.trim(); })
+      .filter(function (l) { return l.length > 12 && !/^[{}()\s]*$/.test(l); });
+    for (var i = 0; i < lines.length; i++) {
+      var at = src.indexOf(lines[i]);
+      if (at !== -1) { jumpTo(lineOf(src, at), 0); return; }
+    }
+    toast('Could not find that handler in the open file', 'error');
+  }
+
+  /* ======================================================================
+     Accessibility pane
+     ====================================================================== */
+  function paintA11y() {
+    var host = $('ins-a11y');
+    var foot = $('ins-a11y-foot');
+    if (!host || !foot) return;
+    foot.innerHTML = '';
+    if (!current || !current.a11y) { nothing(host); return; }
+    var a = current.a11y;
+
+    /* Role / name / states live behind a footer button so the pane itself is
+       about the page-wide report. */
+    var copy = function (t) {
+      return function () {
+        navigator.clipboard.writeText(t)
+          .then(function () { toast('Copied ' + t); })
+          .catch(function () { toast('Clipboard refused', 'error'); });
+      };
+    };
+    var rows = [
+      { label: 'role — ' + a.role, run: copy(a.role) },
+      { label: 'name — ' + (a.name || '(none)'), run: copy(a.name || '') }
+    ].concat(a.states.map(function (s) { return { label: s, run: copy(s) }; }));
+    catButton(foot, 'This element', null, rows, a.role + ' · ' + (a.name || 'unnamed'));
+
+    var html = '<div class="ins-h">Contrast</div><div class="ins-card">'
+      + '<div class="ins-kv"><span class="k">ratio</span><span class="v">'
+      + '<span class="ins-pill ' + (a.contrast.pass ? 'good' : 'bad') + '">'
+      + a.contrast.ratio + ':1</span> needs ' + a.contrast.needs + ':1</span></div>'
+      + kv('text', a.contrast.fg) + kv('behind it', a.contrast.bg) + '</div>';
+
+    if (a.issues.length) {
+      html += '<div class="ins-h">Problems</div><div class="ins-card">'
+        + a.issues.map(function (i) { return '<div class="ins-pill bad">' + esc(i) + '</div>'; }).join('')
+        + '</div>';
+    }
+
+    html += '<div class="ins-h">Heading order</div><div class="ins-card" id="ins-heads"></div>';
+    html += '<div class="ins-h">Landmarks</div><div class="ins-card" id="ins-marks"></div>';
+    host.innerHTML = html;
+
+    var hh = $('ins-heads');
+    if (!a.headings.length) hh.innerHTML = '<span style="color:#8fa3b5">No headings on the page.</span>';
+    a.headings.forEach(function (h) {
+      var row = document.createElement('div');
+      row.className = 'ins-kv';
+      row.style.cursor = 'pointer';
+      row.innerHTML = '<span class="k">h' + h.level + (h.skipped ? ' <span class="ins-pill bad">skipped</span>' : '') + '</span>'
+        + '<span class="v">' + esc(h.text || '(empty)') + '</span>';
+      row.addEventListener('click', function () { select(h.path, true); showPane('elements'); });
+      hh.appendChild(row);
+    });
+    var mm = $('ins-marks');
+    if (!a.landmarks.length) mm.innerHTML = '<span style="color:#8fa3b5">No landmark regions.</span>';
+    a.landmarks.forEach(function (l) {
+      var row = document.createElement('div');
+      row.className = 'ins-kv';
+      row.style.cursor = 'pointer';
+      row.innerHTML = '<span class="k">' + esc(l.role) + '</span><span class="v">' + esc(l.label) + '</span>';
+      row.addEventListener('click', function () { select(l.path, true); showPane('elements'); });
+      mm.appendChild(row);
+    });
+  }
+
+  /* ======================================================================
+     Tools — all of them behind the panel's ⋯ menu, so no tab carries a rail
+     of controls that belong to a different tab
+     ====================================================================== */
+  function setPick(on) {
+    picking = !!on;
+    if (inspectBtn) inspectBtn.setAttribute('aria-pressed', picking ? 'true' : 'false');
+    ask('pick', { on: picking });
+    if (picking) toast('Tap an element in the preview — Esc cancels');
+  }
+  function setMeasure(on) {
+    measuring = !!on;
+    ask('measure', { on: measuring });
+    if (measuring) toast('Drag across the preview to measure');
+  }
+
+  function selectInBlocks() {
+    if (!current) return;
+    var hit = findNodeSource(current.node);
+    modal.style.display = 'none';
+    if (typeof openManageBlocks === 'function') openManageBlocks();
+    if (hit) {
+      setTimeout(function () {
+        var s = $('mb-search');
+        if (s) {
+          s.value = current.node.id || (current.node.cls || '').split(/\s+/)[0] || current.node.tag;
+          s.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }, 260);
+    } else {
+      toast('Opened Manage Blocks — this element is not in the file', 'error');
+    }
+  }
+
+  function toggleState(st) {
+    if (!current) return;
+    var k = keyOf(current.node.path) + ':' + st;
+    var on = !forcedStates[k];
+    if (on) forcedStates[k] = true; else delete forcedStates[k];
+    ask('forceState', { path: current.node.path, state: st, on: on }).then(function () {
+      return select(current.node.path, false);
+    });
+  }
+
+  var moreBtn = $('pvc-more');
+  function openToolsMenu() {
+    var any = !!current;
+    var tick = function (on) { return on ? '✓  ' : '     '; };
+    var rows = [
+      { label: tick(picking) + 'Pick an element', run: function () { if (measuring) setMeasure(false); setPick(!picking); } },
+      { label: tick(measuring) + 'Measure', run: function () { if (picking) setPick(false); setMeasure(!measuring); } },
+      { label: tick(pinned) + 'Pin the selection', disabled: !any, run: function () {
+          pinned = !pinned;
+          pinnedSel = pinned && current ? current.node.selector : '';
+          toast(pinned ? 'Pinned — the selection survives reloads' : 'Unpinned');
+        } },
+      { label: '     Sample its colours', disabled: !any, run: function () {
+          ask('sample', { path: current.node.path }).then(function (r) {
+            if (!r || !r.colors) { toast('Nothing to sample', 'error'); return; }
+            showColorMenu(r.colors);
+          });
+        } },
+      '-',
+      { label: tick(!!forcedStates[any ? keyOf(current.node.path) + ':hover' : '']) + 'Force :hover',
+        disabled: !any, run: function () { toggleState('hover'); } },
+      { label: tick(!!forcedStates[any ? keyOf(current.node.path) + ':focus' : '']) + 'Force :focus',
+        disabled: !any, run: function () { toggleState('focus'); } },
+      { label: tick(!!forcedStates[any ? keyOf(current.node.path) + ':active' : '']) + 'Force :active',
+        disabled: !any, run: function () { toggleState('active'); } },
+      '-',
+      { label: '     Locate in the file…', disabled: !any, run: locateNode },
+      { label: '     Reveal in the editor', disabled: !any, run: revealNode },
+      { label: '     Select in Manage Blocks', disabled: !any, run: selectInBlocks }
+    ];
+    if (activePane() === 'console') {
+      rows.push('-');
+      rows.push({ label: '     Clear the console', run: function () {
+        var c = $('pvc-clear'); if (c) c.click();
+      } });
+    }
+    var r = moreBtn.getBoundingClientRect();
+    buildMenu('Panel tools', rows, r.right - 250, r.bottom + 6);
+  }
+  if (moreBtn) moreBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (menu && menu.classList.contains('open')) { closeMenu(); return; }
+    openToolsMenu();
+  });
+
+  function showColorMenu(colors) {
+    var rows = [];
+    Object.keys(colors).forEach(function (k) {
+      if (!colors[k] || colors[k] === 'rgba(0, 0, 0, 0)') return;
+      rows.push({
+        label: k + ' — ' + colors[k],
+        run: function () {
+          try {
+            editor.insert(colors[k]);
+            modal.style.display = 'none';
+            toast('Inserted ' + colors[k]);
+          } catch (e) { toast('Could not insert', 'error'); }
+        }
+      });
+    });
+    if (!rows.length) { toast('This element has no visible colours', 'error'); return; }
+    var r = moreBtn.getBoundingClientRect();
+    buildMenu('Insert a colour at the caret', rows, r.right - 250, r.bottom + 6);
+  }
+
+  /* ======================================================================
+     The preview's context menu
+     ====================================================================== */
+  function closeMenu() { if (menu) menu.classList.remove('open'); }
+  function buildMenu(head, rows, x, y) {
+    if (!menu) return;
+    menu.innerHTML = '';
+    if (head) {
+      var h = document.createElement('div');
+      h.className = 'pvm-head';
+      h.textContent = head;
+      menu.appendChild(h);
+    }
+    rows.forEach(function (r) {
+      if (r === '-') { menu.appendChild(document.createElement('hr')); return; }
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('role', 'menuitem');
+      if (r.danger) b.className = 'danger';
+      b.innerHTML = '<span>' + esc(r.label) + '</span>' + (r.key ? '<span class="pvm-key">' + esc(r.key) + '</span>' : '');
+      if (r.disabled) b.disabled = true;
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        closeMenu();
+        try { r.run(); } catch (err) { console.warn('[inspector]', err); }
+      });
+      menu.appendChild(b);
+    });
+    menu.classList.add('open');
+    menu.style.left = '0px'; menu.style.top = '0px';
+    var box = menu.getBoundingClientRect();
+    menu.style.left = Math.max(6, Math.min(x, window.innerWidth - box.width - 8)) + 'px';
+    menu.style.top = Math.max(6, Math.min(y, window.innerHeight - box.height - 8)) + 'px';
+  }
+  document.addEventListener('click', function (e) {
+    if (menu && menu.classList.contains('open') && !menu.contains(e.target)) closeMenu();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+
+  function frameSelection() {
+    try { return String(fwin().getSelection() || ''); } catch (e) { return ''; }
+  }
+  function frameExec(cmd) {
+    try { return frame().contentDocument.execCommand(cmd); } catch (e) { return false; }
+  }
+
+  /* Fired by the agent when the user right-clicks inside the preview. */
+  function showPreviewMenu(d) {
+    var f = frame();
+    if (!f) return;
+    var r = f.getBoundingClientRect();
+    var x = r.left + d.x, y = r.top + d.y;
+    var n = d.node;
+    var hasSel = !!(d.selection && d.selection.trim());
+    var rows = [
+      { label: 'Cut', key: 'Ctrl+X', disabled: !(hasSel && d.editable), run: function () {
+          if (!frameExec('cut')) navigator.clipboard.writeText(d.selection);
+        } },
+      { label: 'Copy', key: 'Ctrl+C', disabled: !hasSel, run: function () {
+          navigator.clipboard.writeText(d.selection)
+            .then(function () { toast('Copied'); })
+            .catch(function () { frameExec('copy'); });
+        } },
+      { label: 'Paste', key: 'Ctrl+V', disabled: !d.editable, run: function () {
+          navigator.clipboard.readText().then(function (t) {
+            try { frame().contentDocument.execCommand('insertText', false, t); }
+            catch (e) { toast('Could not paste there', 'error'); }
+          }).catch(function () { toast('Clipboard refused', 'error'); });
+        } },
+      { label: 'Select all', key: 'Ctrl+A', run: function () { frameExec('selectAll'); } },
+      '-',
+      { label: 'Inspect element', run: function () {
+          openDock('elements');
+          select(n.path, true);
+        } },
+      { label: 'Show its markup', run: function () { openDock('code'); select(n.path, false); } },
+      { label: 'Show its styles', run: function () { openDock('styles'); select(n.path, false); } },
+      { label: 'Show its JS events', run: function () { openDock('events'); select(n.path, false); } },
+      '-',
+      { label: 'Copy selector', run: function () {
+          navigator.clipboard.writeText(n.selector).then(function () { toast('Copied ' + n.selector); });
+        } },
+      { label: 'Copy outerHTML', run: function () {
+          ask('select', { path: n.path }).then(function (res) {
+            if (!res) return;
+            navigator.clipboard.writeText(res.outerHTML).then(function () { toast('Copied the markup'); });
+          });
+        } },
+      { label: 'Scroll into view', run: function () { ask('scrollIntoView', { path: n.path }); } },
+      { label: 'Edit as HTML', run: function () { openDock('code'); select(n.path, false); } },
+      '-',
+      { label: 'Reveal in the editor', run: function () { select(n.path, false).then(revealNode); } },
+      { label: 'Select in Manage Blocks', run: function () {
+          select(n.path, false).then(selectInBlocks);
+        } },
+      '-',
+      { label: 'Delete element', danger: true, run: function () {
+          ask('remove', { path: n.path }).then(function () {
+            toast('Removed from the preview (the file is untouched)');
+            treeLoaded = false; loadTree();
+            current = null; paintAll();
+          });
+        } }
+    ];
+    buildMenu(n.label, rows, x, y);
+  }
+
+  /* Right-clicking a row in the tree gets the same actions. */
+  function showNodeMenu(n, x, y) {
+    showPreviewMenu({ node: n, x: 0, y: 0, selection: '', editable: false,
+                      __fromTree: true, xOverride: x, yOverride: y });
+    /* buildMenu already ran with frame-relative coords; reposition. */
+    if (menu && menu.classList.contains('open')) {
+      var box = menu.getBoundingClientRect();
+      menu.style.left = Math.max(6, Math.min(x, window.innerWidth - box.width - 8)) + 'px';
+      menu.style.top = Math.max(6, Math.min(y, window.innerHeight - box.height - 8)) + 'px';
+    }
+  }
+
+  /* ======================================================================
+     Housekeeping
+     ====================================================================== */
+  /* The preview being torn down or reloaded invalidates everything. */
+  new MutationObserver(function () {
+    if (modal.style.display !== 'block') {
+      closeMenu();
+      if (picking) setPick(false);
+      if (measuring) setMeasure(false);
+      treeLoaded = false;
+      agentUp = false;
+    }
+  }).observe(modal, { attributes: true, attributeFilter: ['style'] });
+
+  /* Editing the file re-renders the preview elsewhere; keep the panel honest
+     without hammering it while the user types. */
+  var refresh = null;
+  try {
+    editor.on('change', function () {
+      if (!modal.classList.contains('pvc-open') || activePane() === 'console') return;
+      clearTimeout(refresh);
+      refresh = setTimeout(function () { if (current) paintCode(); }, 900);
+    });
+  } catch (e) {}
+
+  showPane('console');
 })();
 </script>
 
@@ -24353,21 +26635,6 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
 #editor-diags .dg-err  { background: rgba(192,57,43,0.92);  border-color: #e74c3c; color: #fff; }
 #editor-diags .dg-warn { background: rgba(190,140,20,0.92); border-color: #f1c40f; color: #fff; }
 #editor-diags .dg-ok   { background: rgba(39,110,70,0.9);   border-color: #27ae60; color: #eafff2; }
-#editor-diags .dg-more {
-  pointer-events: auto;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 26px; height: 26px;
-  border-radius: 7px;
-  border: 1px solid #4a6278;
-  background: rgba(44,62,80,0.94);
-  color: #ecf0f1;
-  cursor: pointer;
-  padding: 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
-}
-#editor-diags .dg-more svg { width: 16px; height: 16px; }
 
 #diag-popover {
   display: none;
@@ -24429,11 +26696,11 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
 #diag-popover .dp-msg { flex: 1 1 auto; min-width: 0; }
 #diag-popover .dp-empty { padding: 16px 13px; color: #8fa3b5; font-size: 12.5px; text-align: center; }
 
-/* On a phone the chips fold behind the editor's own … button. */
+/* On a phone the chips stay put but shrink, and nothing is parked in the
+   corner when the file is clean. */
 @media (max-width: 768px) {
-  #editor-diags { top: 6px; right: 8px; }
-  #editor-diags .dg-more { display: inline-flex; }
-  #editor-diags.mobile-collapsed .dg-chip { display: none; }
+  #editor-diags { top: 6px; right: 8px; gap: 4px; }
+  #editor-diags .dg-chip { height: 20px; padding: 0 7px; font-size: 11px; }
   #diag-popover { width: calc(100vw - 16px); }
 }
 </style>
@@ -24753,23 +27020,16 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
       + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12" y2="17.1"/></svg>'
       + '<span class="dg-n">0</span></button>'
     + '<button type="button" class="dg-chip dg-ok" hidden title="No problems found">'
-      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>'
-    + '<button type="button" class="dg-more" title="Editor problems" aria-label="Editor problems">'
-      + '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>';
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>';
   host.appendChild(bar);
 
   var errChip  = bar.querySelector('.dg-err');
   var warnChip = bar.querySelector('.dg-warn');
   var okChip   = bar.querySelector('.dg-ok');
-  var moreBtn  = bar.querySelector('.dg-more');
   var pop = $('diag-popover');
 
   var current = [];
   var chipsOn = readFlag(LS_CHIPS, true);
-
-  function isPhone() {
-    return !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
-  }
 
   function paint() {
     if (!chipsOn) { bar.hidden = true; closePop(); return; }
@@ -24777,11 +27037,18 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
     var warns = current.length - errs;
     errChip.hidden = !errs;
     warnChip.hidden = !warns;
-    okChip.hidden = !!(errs || warns) || !(typeof currentFile !== 'undefined' && currentFile);
+    /* The green "all clear" tick is desk-only: on a phone it is one more
+       thing permanently parked over the code for no information at all. */
+    var quiet = !(errs || warns);
+    okChip.hidden = quiet
+      ? (isPhone() || !(typeof currentFile !== 'undefined' && currentFile))
+      : true;
     errChip.querySelector('.dg-n').textContent = errs;
     warnChip.querySelector('.dg-n').textContent = warns;
-    bar.classList.toggle('mobile-collapsed', isPhone());
     bar.hidden = !(errs || warns || !okChip.hidden);
+  }
+  function isPhone() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
   }
 
   function closePop() { if (pop) pop.classList.remove('open'); }
@@ -24835,7 +27102,6 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
   errChip.addEventListener('click', function (e) { e.stopPropagation(); openPop(errChip, 'error'); });
   warnChip.addEventListener('click', function (e) { e.stopPropagation(); openPop(warnChip, 'warning'); });
   okChip.addEventListener('click', function (e) { e.stopPropagation(); openPop(okChip, null); });
-  moreBtn.addEventListener('click', function (e) { e.stopPropagation(); openPop(moreBtn, null); });
   document.addEventListener('click', function (e) {
     if (pop && pop.classList.contains('open') && !pop.contains(e.target)) closePop();
   });
@@ -25533,6 +27799,10 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
   });
   if (search) {
     search.addEventListener('input', function () { render(search.value); place(); });
+    /* A tap on the search box must not reach the document handler below. */
+    ['click', 'pointerdown', 'touchstart'].forEach(function (t) {
+      search.addEventListener(t, function (e) { e.stopPropagation(); });
+    });
     search.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       var first = list.querySelector('button.am-item:not(:disabled)');
@@ -25547,7 +27817,13 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && menu.classList.contains('open')) { close(); btn.focus(); }
   });
-  window.addEventListener('resize', function () { if (menu.classList.contains('open')) close(); });
+  /* On a phone, opening the keyboard fires resize — which used to close the
+     very menu the user had just tapped into.  Reposition instead. */
+  window.addEventListener('resize', function () {
+    if (!menu.classList.contains('open')) return;
+    if (document.activeElement && menu.contains(document.activeElement)) { place(); return; }
+    close();
+  });
 })();
 </script>
 
@@ -25590,7 +27866,7 @@ self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r
     console.error('[cm6] failed to load CodeMirror:', e);
     document.getElementById('code-editor').classList.remove('cm-loading');
     flag('Editor could not load',
-      'CodeMirror is fetched from the network on first run. Check your connection and reload');
+      'CodeMirror is fetched from the network on first run. Check your connection and reload — it is cached afterwards.');
   }
 })();
 </script>
